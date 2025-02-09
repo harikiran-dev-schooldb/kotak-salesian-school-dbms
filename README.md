@@ -1,4 +1,4 @@
-# School DBMS Project
+# Kotak Salesian School DBMS
 
 ## Overview
 The **School DBMS Project** is a database management system designed to efficiently manage student information, attendance, fee collection, and academic performance at **Kotak Salesian School**. This system ensures data integrity, improves administrative efficiency, and provides insightful analytics for better decision-making.
