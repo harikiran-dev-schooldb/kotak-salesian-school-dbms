@@ -1,0 +1,23 @@
+name: Automate Fees Report
+on:
+  schedule:
+    - cron: "0 6 * * *"  # Runs daily at 6 AM UTC
+jobs:
+  run-notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+
+      - name: Install Dependencies
+        run: pip install pandas mysql-connector-python
+
+      - name: Run Jupyter Notebook
+        run: |
+          jupyter nbconvert --to script FeesReport2024-25.ipynb
+          python FeesReport2024-25.py
