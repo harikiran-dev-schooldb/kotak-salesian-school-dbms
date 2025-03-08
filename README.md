@@ -1,61 +1,60 @@
-# Kotak Salesian School DBMS
+# Kotak DBMS Dashboard
 
 ## Overview
-The **School DBMS Project** is a database management system designed to efficiently manage student information, attendance, fee collection, and academic performance at **Kotak Salesian School**. This system ensures data integrity, improves administrative efficiency, and provides insightful analytics for better decision-making.
+The **Kotak DBMS Dashboard** is designed for managing student attendance, fee collection, and performance tracking for Kotak Salesian School. This dashboard provides insights into student payments, attendance trends, and financial summaries.
 
 ## Features
-- **Student Management**: Store and manage student details, including name, class, section, date of birth, and contact information.
-- **Attendance Tracking**: Monitor daily attendance, identify students with frequent absences, and analyze absence trends.
-- **Fee Collection & Reports**: Maintain fee payment records, generate due reports, and analyze day-wise fee collections.
-- **Academic Performance**: Record student grades and track academic progress.
-- **Eligibility Checking System**: Automatically determine a student's class eligibility based on their date of birth.
-- **Data Analytics & Reporting**: Generate various reports using Power BI for attendance trends, fee collection, and student insights.
+- **Students by Payment Status**: Visual representation of fee payments (Paid, Partially Paid, Not Paid, RTE).
+- **Amount Collected by Date**: Track daily fee collections.
+- **Total Students and Fees Summary**: Displays the total number of students, total fees collected, pending fees, and concessions.
+- **Payment by Branches**: View fee collections by different school branches.
+- **Attendance Reports**: Analyze attendance trends, absentees, and students with high absentee rates.
+- **Fee Reports**: Detailed student-wise fee payment history.
+- **Concessions Report**: Breakdown of fee concessions given to students.
+- **Excel vs. App Data Comparison**: Ensure data accuracy by comparing fee reports with Excel records.
 
-## Technology Stack
-- **Database**: MySQL (Partitioned by month for better performance)
-- **Backend**: Python (For data cleaning and importing into MySQL)
-- **Frontend**: Google Sheets Web App (For ease of access and user interaction)
-- **Data Visualization**: Power BI (For advanced reporting and insights)
-- **Excel & Google Sheets**: For managing and analyzing data
+## Setup Instructions
+### Prerequisites
+- Install **Power BI Desktop** to view the dashboard.
+- Ensure access to the **MySQL/PostgreSQL** database for live updates.
+- Use **Python for data processing** before importing into Power BI.
 
-## Database Structure
-The database consists of multiple tables for efficient organization:
-1. **Students**: Stores student details
-2. **Attendance_Report**: Records attendance history
-3. **Fees_Table**: Manages fee payments
-4. **Daywise_Fees_Collection**: Tracks daily fee transactions
-5. **Classes, Sections, Branches**: Organizes students into appropriate categories
+### Steps to Use
+1. **Load the Dashboard**
+   - Open Power BI and import the `KOTAK_DBMS_DASHBOARD.pbix` file.
+2. **Refresh Data**
+   - Click **Refresh** to update the latest data from the database.
+3. **Filter Data**
+   - Use dropdown filters for Class, Payment Status, Month, and Attendance Status.
+4. **Analyze Reports**
+   - Navigate through different report sections using the tabs in Power BI.
 
-## Power BI Reports & Insights
-- **Student Attendance Analysis**
-  - Identify students with more than 10 absences
-  - Detect long absence streaks excluding holidays
-  - Calculate monthly absence trends
-  - Track students with high consecutive absence days
-- **Fee Collection Dashboard**
-  - View daily and monthly collection trends
-  - Identify overdue payments
-- **Performance Analytics**
-  - Compare attendance vs academic performance
-  - Identify students at academic risk
+## Screenshots
+### **1. Students by Payment Status**
 
-## How to Use
-1. **Data Entry**: Input student data, attendance, and fee details into MySQL via Google Sheets or Python scripts.
-2. **Data Processing**: Run automated scripts to clean and process data.
-3. **Visualization**: Connect Power BI to MySQL for real-time insights.
-4. **Decision Making**: Use reports for improving attendance, fee collection, and academic performance.
+![image](https://github.com/user-attachments/assets/5b1c3d2b-02e0-49ab-8e84-a77cd6fcdf2d)
+
+### **2. Amount Collected by Date**
+
+![image](https://github.com/user-attachments/assets/140bc118-697e-4d7d-974e-df1018707ea4)
+
+### **3. Attendance Report**
+
+![image](https://github.com/user-attachments/assets/3130a865-daef-45b1-a677-bc66b06d54b4)
+
+### **4. Fee Reports**
+
+![image](https://github.com/user-attachments/assets/934f0674-d5eb-4ed3-9f69-1f084878a6dc)
+
+### **5. Students Having Absents More Than 30**
+
+![image](https://github.com/user-attachments/assets/0ed2e07d-89ae-4de8-8c94-4b62b1082d9d)
+
 
 ## Future Enhancements
-- **Automated Notifications** for fee dues and absentee alerts
-- **Mobile App Integration** for easy access to reports
-- **AI-based Predictive Analytics** to identify at-risk students
+- **Automated Fee Reminders**: Send alerts for pending fees.
+- **Parent Portal**: Allow parents to track attendance and fees.
+- **Exam Reports**: Add student performance tracking.
 
-## Contributors
-- **Harikiran** - Data Administrator, Kotak Salesian School
-
-## License
-This project is for internal use at Kotak Salesian School and is not open-source.
-
----
-For any inquiries or further developments, please contact the school administration.
+For any queries or improvements, contact **Harikiran** at **Kotak Salesian School**.
 
