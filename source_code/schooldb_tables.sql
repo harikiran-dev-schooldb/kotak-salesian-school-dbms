@@ -13,6 +13,8 @@ DROP TABLE IF EXISTS public.daywise_fees_collection_2024_25 CASCADE;
 DROP TABLE IF EXISTS public.students_2024_25 CASCADE;
 DROP TABLE IF EXISTS public.class_table_2024_25 CASCADE;
 
+
+
 -- Recreate Tables
 
 -- Class Table
@@ -20,11 +22,13 @@ CREATE TABLE public.class_table_2024_25
 (
     classno SERIAL PRIMARY KEY,
     class VARCHAR(50),
-    classid INTEGER UNIQUE NOT NULL,
+    classid INTEGER ,
     classname VARCHAR(50),
-    branchid INTEGER UNIQUE NOT NULL,  -- ✅ Added UNIQUE constraint
+    branchid INTEGER ,  -- ✅ Added UNIQUE constraint
     branchname VARCHAR(50)
 );
+
+
 
 -- Students Table
 CREATE TABLE IF NOT EXISTS public.students_2024_25
@@ -59,8 +63,7 @@ CREATE TABLE IF NOT EXISTS public.attendance_report_2024_25
     attendancestatusid INTEGER NOT NULL,
     PRIMARY KEY (date, admissionno), -- Composite Primary Key
     FOREIGN KEY (admissionno) REFERENCES public.students_2024_25(admissionno) ON DELETE CASCADE,
-    FOREIGN KEY (classno) REFERENCES public.class_table_2024_25(classno) ON DELETE SET NULL,
-    FOREIGN KEY (branchid) REFERENCES public.class_table_2024_25(branchid) ON DELETE SET NULL
+    FOREIGN KEY (classno) REFERENCES public.class_table_2024_25(classno) ON DELETE SET NULL
 );
 
 -- Fees Table
@@ -100,13 +103,20 @@ CREATE TABLE IF NOT EXISTS public.fees_collection_2024_25
 
 -- Fee Concessions
 CREATE TABLE IF NOT EXISTS public.fee_concession_2024_25
-(
-    student_number VARCHAR(20) PRIMARY KEY, -- Primary key
+(	
+	id	 SERIAL,
+    student_number VARCHAR(20), 
     date DATE NOT NULL,
     student_name VARCHAR(100) NOT NULL,
     discount_given NUMERIC(10, 2) NOT NULL,
     FOREIGN KEY (student_number) REFERENCES public.students_2024_25(admissionno) ON DELETE CASCADE
 );
+
+
+-- ALTER TABLE fee_concession_2024_25 DROP CONSTRAINT fee_concession_2024_25_pkey;
+
+ALTER TABLE fee_concession_2024_25 ADD PRIMARY KEY (student_number, date);
+
 
 -- Fees Report
 CREATE TABLE IF NOT EXISTS public.fees_report_2024_25
@@ -123,8 +133,8 @@ CREATE TABLE IF NOT EXISTS public.fees_report_2024_25
 -- Daywise Fees Collection
 CREATE TABLE IF NOT EXISTS public.daywise_fees_collection_2024_25
 (
-    "AdmissionNo" TEXT PRIMARY KEY, -- Primary key
-    "SNo" TEXT,
+    "AdmissionNo" TEXT , 
+    "SNo" TEXT PRIMARY KEY, -- Primary key
     "RecieptNo" TEXT,
     "Class" TEXT,
     "StudentName" TEXT,
@@ -132,5 +142,11 @@ CREATE TABLE IF NOT EXISTS public.daywise_fees_collection_2024_25
     "ReceivedAmount" DOUBLE PRECISION,
     "Remarks" TEXT
 );
+
+ALTER TABLE daywise_fees_collection_2024_25 ADD COLUMN id SERIAL PRIMARY KEY;
+
+
+ALTER TABLE daywise_fees_collection_2024_25 DROP CONSTRAINT daywise_fees_collection_2024_25_pkey;
+
 
 COMMIT;
