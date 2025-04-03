@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS public.daywise_fees_collection_2024_25
     "Remarks" TEXT
 );
 
-ALTER TABLE daywise_fees_collection_2024_25 ADD COLUMN id SERIAL PRIMARY KEY;
+-- ALTER TABLE daywise_fees_collection_2024_25 ADD COLUMN id SERIAL PRIMARY KEY;
 
 
 ALTER TABLE daywise_fees_collection_2024_25 DROP CONSTRAINT daywise_fees_collection_2024_25_pkey;
