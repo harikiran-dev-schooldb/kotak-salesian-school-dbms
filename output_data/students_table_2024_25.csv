@@ -1,4 +1,4 @@
-sno,admissionno,student_name,class,gender,mothername,fathername,penno,dob,mobile,religion,caste,subcaste,iindlang,remarks,classno,joinedyear
+SNo,AdmissionNo,STUDENT_NAME,Class,Gender,MotherName,FatherName,PenNo,DOB,Mobile,Religion,Caste,SubCaste,IIndLang,Remarks,ClassNo,JoinedYear
 1,17159,CHAITHRA PRESINGU,Pre KG,Female,NA,NA,,2021-12-13,7093316614,Hindu,BC - A,,Telugu,,1,
 2,16935,DHRUVITA PRAARTHANA SAVARAPU,Pre KG,Female,NA,NA,,2021-07-18,9912246176,Hindu,SC,JAMBAVULU,Telugu,NO CASTE CERTIFICATE,1,
 3,17158,DHRUVITHA ALPHONSEY SONGA,Pre KG,Female,NA,NA,,2021-07-28,8341709383,Hindu,SC,MADIGA,Telugu,NO CASTE CERTIFICATE,1,
