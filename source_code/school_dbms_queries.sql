@@ -3,7 +3,11 @@ FROM pg_tables
 WHERE schemaname = 'public';
 
 SELECT * FROM students_2024_25;
+
+
 SELECT * FROM class_table_2024_25 ;
+
+
 SELECT * FROM fees_table_2024_25 ;
 SELECT * FROM daywise_fees_collection_2024_25 ;
 SELECT * FROM attendance_report_2024_25 ;

@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS public.students_2024_25
 
 -- Attendance Report
 CREATE TABLE IF NOT EXISTS public.attendance_report_2024_25
-(
+(	
+	id SERIAL,
     date DATE NOT NULL,
     admissionno VARCHAR(20) NOT NULL,
     classno INTEGER NOT NULL,
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.attendance_report_2024_25
     FOREIGN KEY (admissionno) REFERENCES public.students_2024_25(admissionno) ON DELETE CASCADE,
     FOREIGN KEY (classno) REFERENCES public.class_table_2024_25(classno) ON DELETE SET NULL
 );
+
 
 -- Fees Table
 CREATE TABLE IF NOT EXISTS public.fees_table_2024_25
@@ -117,6 +119,11 @@ CREATE TABLE IF NOT EXISTS public.fee_concession_2024_25
 
 ALTER TABLE fee_concession_2024_25 ADD PRIMARY KEY (student_number, date);
 
+ALTER TABLE fee_concession_2024_25
+DROP CONSTRAINT IF EXISTS unique_concession_per_day;
+
+-- Drop the primary key constraint from fee_concession_2024_25
+ALTER TABLE fee_concession_2024_25 DROP CONSTRAINT IF EXISTS fee_concession_2024_25_pkey;
 
 -- Fees Report
 CREATE TABLE IF NOT EXISTS public.fees_report_2024_25
