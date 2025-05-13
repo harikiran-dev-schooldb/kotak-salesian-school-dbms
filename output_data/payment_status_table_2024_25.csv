@@ -2,6 +2,6 @@ PaymentStatusId,PaymentStatus
 1,Total Paid
 2,Not Paid
 3,1 Term Paid
-4,2 Terms Paid
-5,3 Terms Paid
+4,3 Terms Paid
+5,2 Terms Paid
 6,RTE
