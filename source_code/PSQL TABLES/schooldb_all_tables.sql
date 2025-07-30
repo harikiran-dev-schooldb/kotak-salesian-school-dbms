@@ -10,12 +10,20 @@ DROP TABLE IF EXISTS public.fees_collection_2024_25 CASCADE;
 DROP TABLE IF EXISTS public.fee_concession_2024_25 CASCADE;
 DROP TABLE IF EXISTS public.fees_report_2024_25 CASCADE;
 DROP TABLE IF EXISTS public.daywise_fees_collection_2024_25 CASCADE;
-DROP TABLE IF EXISTS public.students_2024_25 CASCADE;
+DROP TABLE IF EXISTS public.students CASCADE;
 DROP TABLE IF EXISTS public.class_table_2024_25 CASCADE;
+DROP TABLE IF EXISTS public.student_list CASCADE;
 
 
 
 -- Recreate Tables
+
+-- Class Table
+CREATE TABLE student_list (
+    adm_no VARCHAR(20),
+    name VARCHAR(100),
+    academic_year VARCHAR(50)
+);
 
 -- Class Table
 CREATE TABLE public.class_table_2024_25

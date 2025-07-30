@@ -2,7 +2,9 @@ SELECT 'SELECT * FROM ' || tablename || ' LIMIT 10;'
 FROM pg_tables 
 WHERE schemaname = 'public';
 
-SELECT * FROM students;
+SELECT * FROM students WHERE academic_year = '2025-26';
+SELECT * FROM student_list;
+DROP TABLE 
 
 SELECT * FROM fees_table;
 
@@ -17,7 +19,7 @@ SELECT * FROM attendance_report;
 DELETE FROM attendance_report;
 
 SELECT * FROM fees_collection WHERE academic_year = '2024_25';
-SELECT * FROM fee_concession_2024_25 ;
+SELECT * FROM fee_concession_report ;
 
 SELECT * FROM fees_report_2024_25 ;
 

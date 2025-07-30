@@ -154,3 +154,71 @@ psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer
 CONTEXT:  COPY attendance_report, line 1, column classno: ""
 
 
+2025-07-28 06:44:27,083 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY attendance_report, line 1: "560371,2025-07-16,17371,,0,0,2,2025-26"
+
+
+2025-07-28 06:47:53,332 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: ""
+CONTEXT:  COPY attendance_report, line 1, column classno: ""
+
+
+2025-07-28 07:01:06,673 - ERROR - \u274c Unexpected error: 'Date'
+
+2025-07-28 07:01:47,219 - ERROR - \u274c Unexpected error: 'Date'
+
+2025-07-28 07:02:28,764 - ERROR - \u274c Unexpected error: invalid literal for int() with base 10: '14384A'
+
+2025-07-28 07:04:15,200 - ERROR - \u274c Unexpected error: [Errno 13] Permission denied: 'D:\\GITHUB\\kotak-school-dbms\\output_data\\attendance_report.csv'
+
+2025-07-28 07:04:51,748 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: ""
+CONTEXT:  COPY attendance_report, line 1, column classno: ""
+
+
+2025-07-28 07:07:14,088 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: ""
+CONTEXT:  COPY attendance_report, line 1, column classno: ""
+
+
+2025-07-28 07:14:24,411 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: ""
+CONTEXT:  COPY attendance_report, line 1, column classno: ""
+
+
+2025-07-28 07:33:43,662 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_17264\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: "24.0"
+CONTEXT:  COPY attendance_report, line 1, column classno: "24.0"
+
+
+2025-07-28 18:38:52,207 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_2108\1021333320.py", line 27, in update_database
+    cursor.copy_from(f, TABLE_NAME, sep=",")  # \u2705 lowercase and unquoted
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: "31.0"
+CONTEXT:  COPY attendance_report, line 1, column classno: "31.0"
+
+
+2025-07-28 18:46:33,751 - ERROR - \u274c Unexpected error: data type 'Int64' not understood
+
+2025-07-28 18:48:33,711 - ERROR - \u274c Unexpected error: data type 'Int' not understood
+
