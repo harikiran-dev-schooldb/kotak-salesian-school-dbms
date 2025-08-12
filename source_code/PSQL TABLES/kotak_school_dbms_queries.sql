@@ -22,7 +22,7 @@ SELECT * FROM attendance_report;
 
 DELETE FROM attendance_report;
 
-SELECT * FROM fees_collection WHERE academic_year_id = 1;
+SELECT * FROM fees_collection WHERE academic_year_id = 2;
 DROP TABLE fees_collection;
 
 SELECT * FROM fee_concession_report ;
