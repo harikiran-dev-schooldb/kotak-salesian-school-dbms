@@ -1,0 +1,7 @@
+PaymentStatusId,Color (Hex Code),Reason
+1,#008000,Green for full payment
+2,#FFD700,Yellow for partial payment
+3,#FF0000,Red for unpaid status
+4,#00B4D8,Blue for scheduled payments
+5,#FF8C00,Orange for mid-way payments
+6,#808080,Gray for government-funded students
