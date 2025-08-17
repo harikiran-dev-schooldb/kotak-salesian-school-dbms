@@ -1,8 +1,8 @@
 payment_status_id,payment_status
-1,Total Paid
-2,Exempted
-3,1 Term
-4,Not Paid
-5,3 Terms
+1,1 Term
+2,2 Terms
+3,3 Terms
+4,Exempted
+5,Not Paid
 6,RTE
-7,2 Terms
+7,Total Paid

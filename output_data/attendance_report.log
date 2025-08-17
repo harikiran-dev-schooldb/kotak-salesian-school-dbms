@@ -222,3 +222,37 @@ CONTEXT:  COPY attendance_report, line 1, column classno: "31.0"
 
 2025-07-28 18:48:33,711 - ERROR - \u274c Unexpected error: data type 'Int' not understood
 
+2025-08-12 06:46:14,416 - ERROR - \u274c Unexpected error: [Errno 2] No such file or directory: 'D:\\GITHUB\\kotak-school-dbms\\output_data\\attendance_report_2025_26.csv'
+
+2025-08-12 18:41:08,614 - ERROR - \u274c Unexpected error: [Errno 2] No such file or directory: 'D:\\GITHUB\\kotak-school-dbms\\output_data\\attendance_report_2025_26.csv'
+
+2025-08-13 06:08:19,936 - ERROR - Traceback (most recent call last):
+  File "C:\Users\harik\AppData\Local\Temp\ipykernel_6848\2408692080.py", line 14, in main
+    df_2025 = pd.read_csv(file2)
+  File "c:\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "c:\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 620, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "c:\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 1620, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "c:\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 1880, in _make_engine
+    self.handles = get_handle(
+                   ~~~~~~~~~~^
+        f,
+        ^^
+    ...<6 lines>...
+        storage_options=self.options.get("storage_options", None),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "c:\Python313\Lib\site-packages\pandas\io\common.py", line 873, in get_handle
+    handle = open(
+        handle,
+    ...<3 lines>...
+        newline="",
+    )
+FileNotFoundError: [Errno 2] No such file or directory: 'D:\\GITHUB\\kotak-school-dbms\\output_data\\attendance_report_2025_26.csv'
+
+2025-08-14 18:54:50,242 - ERROR - \u274c Unexpected error: load_and_clean_data() missing 1 required positional argument: 'file3'
+

@@ -19,6 +19,9 @@ SELECT * FROM daywise_fees_collection WHERE academic_year = '2024-25';
 SELECT * FROM class_table_2024_25 ;
 
 SELECT * FROM attendance_report;
+SELECT * FROM class_table;
+SELECT * FROM attendance_report WHERE academic_year_id = 2;
+DROP TABLE attendance_report;
 
 DELETE FROM attendance_report;
 
