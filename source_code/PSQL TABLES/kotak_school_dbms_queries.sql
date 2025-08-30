@@ -4,6 +4,7 @@ WHERE schemaname = 'public';
 
 SELECT * FROM students WHERE academic_year_id = 1;
 SELECT * FROM student_list;
+DROP TABLE student_list;
 
 SELECT * FROM students;
 DROP TABLE students;
