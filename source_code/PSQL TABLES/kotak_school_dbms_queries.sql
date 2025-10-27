@@ -10,12 +10,13 @@ SELECT * FROM students;
 DROP TABLE students;
 
 SELECT * FROM fees_table;
+SELECT * FROM fees_table WHERE staff_id is not null and academic_year_id = 2;
 DROP TABLE fees_table;
 
 SELECT * FROM fees_table WHERE academic_year_id = 2;
-DROP TABLE daywise_fees_collection;
 
-SELECT * FROM daywise_fees_collection WHERE academic_year = '2024-25';
+SELECT * FROM daywise_fees_collection WHERE academic_year_id = 2;
+DROP TABLE daywise_fees_collection;
 
 SELECT * FROM class_table_2024_25 ;
 
