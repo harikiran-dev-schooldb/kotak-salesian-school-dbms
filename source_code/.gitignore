@@ -1,0 +1,4 @@
+# Secrets and environment files
+.env
+google_api_keys/
+*.json

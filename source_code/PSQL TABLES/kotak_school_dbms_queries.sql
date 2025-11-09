@@ -16,6 +16,7 @@ DROP TABLE fees_table;
 SELECT * FROM fees_table WHERE academic_year_id = 2;
 
 SELECT * FROM daywise_fees_collection WHERE academic_year_id = 2;
+SELECT * FROM daywise_fees_collection WHERE payment_mode != 'CASH';
 DROP TABLE daywise_fees_collection;
 
 SELECT * FROM class_table_2024_25 ;
