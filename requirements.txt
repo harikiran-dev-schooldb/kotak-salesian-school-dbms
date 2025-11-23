@@ -1,7 +1,7 @@
 SQLAlchemy
 beautifulsoup4
 gspread
-numpyasnp
+numpy
 oauth2client
 pandasaspd
 psycopg2-binary
