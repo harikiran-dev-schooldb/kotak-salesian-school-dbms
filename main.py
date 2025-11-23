@@ -49,7 +49,8 @@ def main():
         "database": os.getenv("DB_NAME"),
     }
 
-    password = urllib.parse.quote(POSTGRES_CREDENTIALS["password"])
+    password = POSTGRES_CREDENTIALS["password"]
+
     conn_url = (
             f"postgresql+psycopg2://{POSTGRES_CREDENTIALS['username']}:{password}"
             f"@{POSTGRES_CREDENTIALS['host']}:{POSTGRES_CREDENTIALS['port']}/"
