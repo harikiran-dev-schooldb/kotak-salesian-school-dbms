@@ -1,0 +1,11 @@
+SQLAlchemy
+beautifulsoup4
+gspread
+numpyasnp
+oauth2client
+pandasaspd
+psycopg2-binary
+python-dotenv
+requests
+urllib
+warnings
