@@ -1,11 +1,9 @@
-SQLAlchemy
-beautifulsoup4
-gspread
+pandas
 numpy
+gspread
 oauth2client
-pandasaspd
-psycopg2-binary
-python-dotenv
+SQLAlchemy
 requests
-urllib
-warnings
+beautifulsoup4
+python-dotenv
+psycopg2-binary
