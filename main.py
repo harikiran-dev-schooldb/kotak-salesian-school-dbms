@@ -59,53 +59,6 @@ def main():
 
     engine = create_engine(conn_url)
 
-    # * Backup Config (from .env)
-    BACKUP_DIR = os.getenv("BACKUP_DIR")
-    DB_DUMP_PATH = os.getenv("PG_DUMP_PATH")
-
-    print("Using BACKUP_DIR:", BACKUP_DIR)
-    print("Using DB_DUMP_PATH:", DB_DUMP_PATH)
-
-
-    # * Ensure the backup directory exists
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-
-    # * Generate a timestamp for the backup file
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    backup_file = os.path.join(BACKUP_DIR, f"backup_{POSTGRES_CREDENTIALS['database']}_{timestamp}.sql")
-
-    # * Run DB_dump
-    try:
-        result = subprocess.run(
-            [
-                DB_DUMP_PATH,  # Use full path if not in PATH
-                "-U", POSTGRES_CREDENTIALS["username"],
-                "-h", POSTGRES_CREDENTIALS["host"],
-                "-p", POSTGRES_CREDENTIALS["port"],
-                "-F", "c",
-                "-b",
-                "-v",
-                "-f", backup_file,
-                POSTGRES_CREDENTIALS["database"],
-            ],
-            env={**os.environ, "PGPASSWORD": POSTGRES_CREDENTIALS["password"]},  # Pass password securely
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            shell=True
-        )
-
-        # * Check for errors
-        if result.returncode == 0:
-            print(f"✅ Backup successful: {backup_file}")
-        else:
-            print(f"❌ Backup failed!\nError: {result.stderr}")
-
-    except FileNotFoundError:
-        print(f"⚠️ DB_dump not found at {DB_DUMP_PATH}. Check PostgreSQL installation or system PATH.")
-
-    except Exception as e:
-        print(f"⚠️ An unexpected error occurred: {e}")
 
 
     # --- Cell 3 ---
