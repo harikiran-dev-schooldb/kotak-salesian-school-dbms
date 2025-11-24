@@ -30,5 +30,6 @@ jobs:
           NEON_DB:   ${{ secrets.DB_NAME }}
           NEON_USER: ${{ secrets.DB_USER }}
           NEON_PASS: ${{ secrets.DB_PASSWORD }}
+          NEON_PORT: ${{ secrets.DB_PORT }}
         run: |
           python main.py
