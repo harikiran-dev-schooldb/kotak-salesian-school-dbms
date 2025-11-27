@@ -2,6 +2,17 @@ SELECT 'SELECT * FROM ' || tablename || ' LIMIT 10;'
 FROM pg_tables 
 WHERE schemaname = 'public';
 
+SELECT 
+    format(
+        'SELECT %s FROM %I;',
+        string_agg(quote_ident(column_name), ', '),
+        table_name
+    ) AS query
+FROM information_schema.columns
+WHERE table_schema = 'public'
+GROUP BY table_name;
+
+
 SELECT * FROM students WHERE academic_year_id = 1;
 SELECT * FROM student_list;
 DROP TABLE student_list;
