@@ -26,7 +26,6 @@ from bs4 import BeautifulSoup
 import requests
 import logging
 from datetime import date
-import requests
 from io import StringIO
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -51,6 +50,18 @@ from sqlalchemy import create_engine
 
 # Load environment variables
 load_dotenv()
+
+BASE_DIR = os.getenv("BASE_DIR")
+if not BASE_DIR:
+    raise ValueError("❌ BASE_DIR not found in .env")
+
+OUTPUT_DIR = os.path.join(BASE_DIR, "output_data")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+SOURCE_DIR = os.path.join(BASE_DIR, "source_data")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
 
 # PostgreSQL Credentials
 POSTGRES_CREDENTIALS = {
@@ -295,7 +306,9 @@ def clean_data(df):
     df["academic_year_id"] = df["academic_year"].apply(lambda x: 1 if x== "2024-25" else 2)
     
     # 🧾 Save CSV for auditing
-    df.to_csv(r"D:\GITHUB\kotak-school-dbms\output_data\students_data.csv", index=False)
+    students_path = os.path.join(OUTPUT_DIR, "students_data.csv")
+    df.to_csv(students_path, index=False)
+
 
     student_list_df = df_sorted.drop_duplicates(subset="adm_no", keep="first")[
         [
@@ -305,8 +318,8 @@ def clean_data(df):
         ]
     ]
 
-    student_list_df.to_csv(r"D:\GITHUB\kotak-school-dbms\output_data\student_list.csv", index=False)
-
+    student_list_path = os.path.join(OUTPUT_DIR, "student_list.csv")
+    student_list_df.to_csv(student_list_path, index=False)
 
     students_df = df[
         [
@@ -502,7 +515,8 @@ def clean_data(df):
     df = df.sort_values(by=["academic_year_id", "classno", "student_name"], ascending=[True, True, True])
 
     # 📂 Save main fees report
-    df.to_csv(r"D:\GITHUB\kotak-school-dbms\output_data\fees_report.csv", index=False)
+    fees_path = os.path.join(OUTPUT_DIR, "fees_report.csv")
+    df.to_csv(fees_path, index=False)
 
     # ✅ Ensure payment_status column exists
     if "payment_status" not in df.columns:
@@ -526,7 +540,8 @@ def clean_data(df):
     staff_child_df["staff_id"] = range(1, len(staff_child_df) + 1)
 
     # Save staff child table
-    staff_child_df.to_csv(r"D:\GITHUB\kotak-school-dbms\output_data\staff_child_table.csv", index=False)
+    fees_path = os.path.join(OUTPUT_DIR, "staff_child_table.csv")
+    staff_child_df.to_csv(fees_path, index=False)
     print("✅ Staff Child Table created successfully.\n")
 
     # --- Step 1: Merge Payment Status ---
@@ -699,8 +714,10 @@ if __name__ == "__main__":
 
 
 # %%
-staff_child_df = pd.read_csv(r"D:\GITHUB\kotak-school-dbms\output_data\staff_child_table.csv")
+staff_child_path = os.path.join(OUTPUT_DIR, "staff_child_table.csv")
+staff_child_df = pd.read_csv(staff_child_path)
 staff_child_df
+
 
 # %% [markdown]
 # <h2 align="center"><b>DAY WISE REPORTS</b></h2>
@@ -732,9 +749,6 @@ credentials = {
     "uname": os.getenv("APP_UNAME"),
     "psw": os.getenv("APP_PSW")
 }
-
-OUTPUT_DIR = r"D:\GITHUB\kotak-school-dbms\output_data"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # %%
 # --- FUNCTION: Determine Academic Year ---
@@ -1227,7 +1241,8 @@ data_url_2024_25 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_disco
 data_url_2025_26 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=7"
 
 TABLE_NAME = "fee_concession_report"
-OUTPUT_PATH = r"D:\GITHUB\kotak-school-dbms\output_data\fee_concession_report.csv"
+fee_concession_report_path = os.path.join(OUTPUT_DIR, "fee_concession_report.csv")
+
 
 # %%
 # ------------------ Login Function ------------------
@@ -1310,8 +1325,8 @@ def clean_data(df):
         lambda x: 1 if x == "2024-25" else 2 if x == "2025-26" else None
     )
     
-    df.to_csv(OUTPUT_PATH, index=False)
-    print(f"✅ Cleaned data saved to {OUTPUT_PATH}\n")
+    df.to_csv(fee_concession_report_path, index=False)
+    print(f"✅ Cleaned data saved to {fee_concession_report_path}\n")
 
     df = df.drop(columns=['student_name', "academic_year"], errors="ignore")
 
@@ -1401,7 +1416,7 @@ data_url_2024_25 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_disco
 data_url_2025_26 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=7"
 
 TABLE_NAME = "fee_concession_report"
-OUTPUT_PATH = r"D:\GITHUB\kotak-school-dbms\output_data\fee_concession_report.csv"
+fee_concession_path = os.path.join(OUTPUT_DIR, "fee_concession_report.csv")
 
 # %%
 # ------------------ Login Function ------------------
@@ -1484,8 +1499,8 @@ def clean_data(df):
         lambda x: 1 if x == "2024-25" else 2 if x == "2025-26" else None
     )
     
-    df.to_csv(OUTPUT_PATH, index=False)
-    print(f"✅ Cleaned data saved to {OUTPUT_PATH}\n")
+    df.to_csv(fee_concession_path, index=False)
+    print(f"✅ Cleaned data saved to {OUTPUT_DIR}\n")
 
     df = df.drop(columns=['student_name', "academic_year"], errors="ignore")
 
@@ -1572,7 +1587,10 @@ if __name__ == "__main__":
 # ------------------ CONFIGURATION ------------------
 LOGIN_URL = "https://app.myskoolcom.tech/kotak_vizag/login"
 DATA_URL = "https://app.myskoolcom.tech/kotak_vizag/office_fee_new/daywise_atom_report/"
-CREDENTIALS = {"uname": "harikiran", "psw": "812551"}
+CREDENTIALS = {
+    "uname": os.getenv("APP_UNAME"),
+    "psw": os.getenv("APP_PSW")
+}
 TABLE_NAME = "fee_transcation_atom_report"
 OUTPUT_PATH = r"D:\GITHUB\kotak-school-dbms\output_data\fee_transcation_atom_report.csv"
 
@@ -1977,9 +1995,10 @@ df.head(1)
 df.head()
 
 # %%
-output_path = r"D:\GITHUB\kotak-school-dbms\output_data\atom_report_cleaned.xlsx"
-df.to_excel(output_path, index=False)
-print(f"🧹 Cleaned Excel saved to: {output_path}")
+atom_list_path = os.path.join(OUTPUT_DIR, "atom_report_cleaned.xlsx")
+
+df.to_excel(atom_list_path, index=False)
+print(f"🧹 Cleaned Excel saved to: {atom_list_path}")
 
 # %%
 df.info()
@@ -2054,7 +2073,7 @@ with engine.connect() as conn:
 # <h2 align="center"><b>ATOM vs DAYWISE</b></h2>
 
 # %%
-atom_df = pd.read_excel(output_path)
+atom_df = pd.read_excel(atom_list_path)
 atom_df.head(3)
 
 # %%
@@ -2184,9 +2203,17 @@ def upload_staff_table(df, TABLE_NAME, truncate=True):
 
 # %%
 import pandas as pd
-staff_child_df = pd.read_csv(r"D:\GITHUB\kotak-school-dbms\output_data\staff_child_table.csv")
+staff_child_path = os.path.join(OUTPUT_DIR, "staff_child_table.csv")
+staff_child_df = pd.read_csv(staff_child_path)
+
 
 # %%
 upload_staff_table(staff_child_df,TABLE_NAME)
+
+# %%
+
+
+# %%
+
 
 
