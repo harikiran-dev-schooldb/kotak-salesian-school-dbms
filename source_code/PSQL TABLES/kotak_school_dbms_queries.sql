@@ -73,6 +73,14 @@ WHERE tablename = 'fee_concession_2024_25';
 SELECT * FROM atom_transaction_report LIMIT 10;
 DROP TABLE atom_transaction_report;
 
+SELECT * FROM fees_table WHERE academic_year_id = '2' LIMIT 16 ;
+
+SELECT adm_no, term1, term2, term3, term4
+FROM fees_table
+WHERE term3 IS NULL OR term3 = 0
+ORDER BY adm_no;
+
+
 
 
 
