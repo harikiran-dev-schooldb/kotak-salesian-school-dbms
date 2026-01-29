@@ -1642,6 +1642,8 @@ def parse_html_to_dataframe(html: str) -> pd.DataFrame:
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     df.rename(columns={'amount': 'term_amount', 'amount.1': 'recieved_amount'}, inplace=True)
     df.drop(columns=['adm_no', 'payment_id.1', 'student_no'], errors="ignore", inplace=True)
+    # Replace '--' and empty strings with pandas NA
+    df = df.replace(['--', ''], pd.NA)
 
     print("📊 Columns after cleaning:", df.columns.tolist())
     return df
@@ -1741,34 +1743,100 @@ if __name__ == "__main__":
 # <h2 align="center"><b>ATOM WEBSITE TRANSCATION REPORT</b></h2>
 
 # %%
-from datetime import datetime
-# ================= CONFIG =================
-USERNAME = os.getenv("ATOM_USERNAME") 
+# ================= IMPORTS =================
+import os
+import sys
+import time
+from datetime import datetime, timedelta
+
+import pandas as pd
+from dotenv import load_dotenv
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+from webdriver_manager.chrome import ChromeDriverManager
+
+# ================= ENV =================
+load_dotenv()
+
+USERNAME = os.getenv("ATOM_USERNAME")
 PASSWORD = os.getenv("ATOM_PASSWORD")
 
+if not USERNAME or not PASSWORD:
+    print("❌ Missing ATOM credentials")
+    sys.exit(1)
+
+# ================= CONFIG =================
 LOGIN_URL = "https://titan.atomtech.in/titan_merchant_console"
 TXN_URL = "https://titan.atomtech.in/titan_merchant_console/view-transaction-temp"
 
-FROM_DATE = "30/10/2025"
-TO_DATE = datetime.today().strftime("%d/%m/%Y")
+FULL_FROM_DATE = datetime.strptime("30/10/2025", "%d/%m/%Y")
+FULL_TO_DATE = datetime.today()
 
 DOWNLOAD_DIR = r"D:\GITHUB\kotak-school-dbms\source_data"
-FINAL_NAME = "atom_report.xlsx"
-FINAL_PATH = os.path.join(DOWNLOAD_DIR, FINAL_NAME)
-# =========================================
+FINAL_PATH = os.path.join(DOWNLOAD_DIR, "atom_report.xlsx")
+MAX_DAYS = 90
 
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# ================= CLEAN OLD FILE =================
+# ================= CLEAN FINAL FILE =================
 if os.path.exists(FINAL_PATH):
     os.remove(FINAL_PATH)
-    print("🗑️ Previous atom_report.xlsx deleted")
+    print("🗑️ Old atom_report.xlsx deleted")
+
+# ================= UTILS =================
+def split_date_ranges(start, end, days=90):
+    ranges = []
+    cur = start
+    while cur <= end:
+        r_end = min(cur + timedelta(days=days - 1), end)
+        ranges.append((cur, r_end))
+        cur = r_end + timedelta(days=1)
+    return ranges
 
 
-# ================= CHROME SETUP =================
+def wait_for_new_download(existing_files, timeout=60):
+    end = time.time() + timeout
+    while time.time() < end:
+        files = {
+            f for f in os.listdir(DOWNLOAD_DIR)
+            if f.endswith(".xlsx") and not f.endswith(".crdownload")
+        }
+        new_files = files - existing_files
+        if new_files:
+            return new_files.pop()
+        time.sleep(1)
+    return None
+
+
+def has_no_records(driver):
+    """Detect no-records condition safely"""
+    # Text-based detection
+    try:
+        msg = driver.find_element(
+            By.XPATH, "//*[contains(text(),'No') and contains(text(),'Record')]"
+        )
+        if msg.is_displayed():
+            return True
+    except:
+        pass
+
+    # Table row detection (backup)
+    rows = driver.find_elements(By.XPATH, "//table//tbody/tr")
+    if len(rows) == 0:
+        return True
+
+    return False
+
+# ================= CHROME =================
 prefs = {
     "download.default_directory": DOWNLOAD_DIR,
     "download.prompt_for_download": False,
-    "download.directory_upgrade": True,
     "safebrowsing.enabled": True
 }
 
@@ -1784,9 +1852,8 @@ driver = webdriver.Chrome(
 
 wait = WebDriverWait(driver, 60)
 
-
 # ================= LOGIN =================
-print("Opening login page...")
+print("🔐 Logging in...")
 driver.get(LOGIN_URL)
 
 wait.until(EC.presence_of_element_located((By.ID, "userName")))
@@ -1794,88 +1861,72 @@ driver.find_element(By.ID, "userName").send_keys(USERNAME)
 driver.find_element(By.ID, "password").send_keys(PASSWORD)
 driver.find_element(By.XPATH, "//button[contains(text(),'Login')]").click()
 
-# Confirm login
-try:
-    wait.until(EC.presence_of_element_located((By.TAG_NAME, "nav")))
-    print("✅ LOGIN CONFIRMED")
-except:
-    print("❌ LOGIN FAILED")
-    driver.quit()
-    sys.exit(1)
+wait.until(EC.presence_of_element_located((By.TAG_NAME, "nav")))
+print("✅ Login success")
 
-time.sleep(5)
-
-
-# ================= TRANSACTION PAGE =================
-print("Opening transaction page...")
+# ================= TRANSACTIONS =================
 driver.get(TXN_URL)
-
 wait.until(EC.presence_of_element_located((By.ID, "fromDate")))
 
+date_ranges = split_date_ranges(FULL_FROM_DATE, FULL_TO_DATE, MAX_DAYS)
+all_dfs = []
 
-# ================= SET DATE FILTER =================
-from_input = driver.find_element(By.ID, "fromDate")
-from_input.clear()
-from_input.send_keys(FROM_DATE)
+for start, end in date_ranges:
+    from_date = start.strftime("%d/%m/%Y")
+    to_date = end.strftime("%d/%m/%Y")
 
-to_input = driver.find_element(By.ID, "toDate")
-to_input.clear()
-to_input.send_keys(TO_DATE)
-to_input.send_keys(Keys.TAB)
+    print(f"⬇️ Fetching {from_date} → {to_date}")
 
-time.sleep(1)
+    existing_files = set(os.listdir(DOWNLOAD_DIR))
 
+    # Set date filters
+    driver.find_element(By.ID, "fromDate").clear()
+    driver.find_element(By.ID, "fromDate").send_keys(from_date)
 
-# ================= SEARCH =================
-wait.until(EC.element_to_be_clickable((By.ID, "search"))).click()
-time.sleep(5)
+    driver.find_element(By.ID, "toDate").clear()
+    driver.find_element(By.ID, "toDate").send_keys(to_date)
+    driver.find_element(By.ID, "toDate").send_keys(Keys.TAB)
 
+    wait.until(EC.element_to_be_clickable((By.ID, "search"))).click()
+    time.sleep(3)
 
-# ================= DOWNLOAD EXCEL =================
-print("Downloading Excel...")
+    # 🔴 NO RECORDS CHECK
+    if has_no_records(driver):
+        print(f"⚠️ No records for {from_date} → {to_date}, skipping")
+        continue
 
-driver.execute_script("""
-    if (typeof downloadData === 'function') {
-        downloadData('.xlsx');
-    } else {
-        console.error('downloadData not found');
-    }
-""")
+    # Download only if records exist
+    driver.execute_script("""
+        if (typeof downloadData === 'function') {
+            downloadData('.xlsx');
+        }
+    """)
 
+    downloaded = wait_for_new_download(existing_files)
 
+    if not downloaded:
+        print(f"❌ Download failed for {from_date} → {to_date}")
+        continue
 
-# ================= WAIT & RENAME =================
-timeout = time.time() + 60
-downloaded_file = None
+    file_path = os.path.join(DOWNLOAD_DIR, downloaded)
+    df = pd.read_excel(file_path)
+    all_dfs.append(df)
 
-while time.time() < timeout:
-    files = [
-        f for f in os.listdir(DOWNLOAD_DIR)
-        if f.endswith(".xlsx") and not f.endswith(".crdownload")
-    ]
-    if files:
-        downloaded_file = files[0]
-        break
-    time.sleep(1)
+    os.remove(file_path)  # cleanup temp file
+    print("✅ Appended & cleaned")
 
-if not downloaded_file:
-    print("❌ Download failed or timed out")
+# ================= FINAL MERGE =================
+if not all_dfs:
+    print("❌ No data downloaded")
     driver.quit()
     sys.exit(1)
 
-old_path = os.path.join(DOWNLOAD_DIR, downloaded_file)
+final_df = pd.concat(all_dfs, ignore_index=True)
+final_df.to_excel(FINAL_PATH, index=False)
 
-# overwrite-safe rename
-if os.path.exists(FINAL_PATH):
-    os.remove(FINAL_PATH)
+print("🎉 atom_report.xlsx created successfully")
 
-os.rename(old_path, FINAL_PATH)
-print("✅ File saved as atom_report.xlsx")
-
-
-# ================= CLEAN EXIT =================
 driver.quit()
-print("✅ DONE")
 
 
 # %%
@@ -2211,9 +2262,28 @@ staff_child_df = pd.read_csv(staff_child_path)
 upload_staff_table(staff_child_df,TABLE_NAME)
 
 # %%
+def notify_success(title, message):
+    from plyer import notification
+
+    notification.notify(
+        title=title,
+        message=message,
+        app_name="Python",
+        timeout=5
+    )
 
 
 # %%
+try:
+    # ---- all your code executed successfully ----
+
+    notify_success(
+        "Execution Complete",
+        "All Python cells ran successfully."
+    )
+
+except Exception as e:
+    print("Execution failed:", e)
 
 
 
