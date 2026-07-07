@@ -10,6 +10,7 @@
 
 # %%
 import os
+import glob
 import pandas as pd
 import numpy as np
 import sys
@@ -25,7 +26,6 @@ import warnings
 from bs4 import BeautifulSoup
 import requests
 import logging
-from datetime import date
 from io import StringIO
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -36,21 +36,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
+# ================= ENV =================
+load_dotenv()
+
 # %% [markdown]
 # ## **Backup Files Before running New**
 
 # %%
-import os
-import glob
-import datetime
-import subprocess
-import urllib.parse
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
-
-# Load environment variables
-load_dotenv()
-
 BASE_DIR = os.getenv("BASE_DIR")
 if not BASE_DIR:
     raise ValueError("❌ BASE_DIR not found in .env")
@@ -60,8 +52,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 SOURCE_DIR = os.path.join(BASE_DIR, "source_data")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
 
 # PostgreSQL Credentials
 POSTGRES_CREDENTIALS = {
@@ -108,6 +98,8 @@ backup_file = os.path.join(
     f"backup_{POSTGRES_CREDENTIALS['database']}_{timestamp}.sql"
 )
 
+print(POSTGRES_CREDENTIALS)
+
 # ✅ Run pg_dump
 try:
     result = subprocess.run(
@@ -147,15 +139,18 @@ except Exception as e:
 # ## **Import Libraries & Define Credentials**
 
 # %%
+from datetime import date, datetime, timedelta
 # * Google Sheets Config (from .env)
 GOOGLE_JSON_STUDENT_PATHS = {
     "2024-25": os.getenv("GOOGLE_JSON_STUDENT_PATH_2024_25"),
     "2025-26": os.getenv("GOOGLE_JSON_STUDENT_PATH_2025_26"),
+    "2026-27": os.getenv("GOOGLE_JSON_STUDENT_PATH_2026_27")
 }
 
 GOOGLE_SHEET_TITLES = {
     "2024-25": os.getenv("GOOGLE_SHEET_TITLE_2024_25"),
     "2025-26": os.getenv("GOOGLE_SHEET_TITLE_2025_26"),
+    "2026-27": os.getenv("GOOGLE_SHEET_TITLE_2026_27")
 }
 
 UNIQUE_KEY = os.getenv("UNIQUE_KEY")
@@ -188,66 +183,141 @@ def clean_column_names(df):
 TC_APPLIED_SHEET_NAME = "TC LIST"
 
 def merge_and_tag():
-
-    # Fetch and clean data
+    # -----------------------------
+    # Fetch & Clean Student Data
+    # -----------------------------
     df_2024 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2024-25"], "Overall", GOOGLE_JSON_STUDENT_PATHS["2024-25"]
+        GOOGLE_SHEET_TITLES["2024-25"],
+        "Overall",
+        GOOGLE_JSON_STUDENT_PATHS["2024-25"]
     ))
 
     df_2025 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2025-26"], "Overall", GOOGLE_JSON_STUDENT_PATHS["2025-26"]
+        GOOGLE_SHEET_TITLES["2025-26"],
+        "Overall",
+        GOOGLE_JSON_STUDENT_PATHS["2025-26"]
     ))
 
-    # ✅ TC applied sheet
-    df_tc_applied = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2024-25"], TC_APPLIED_SHEET_NAME, GOOGLE_JSON_STUDENT_PATHS["2024-25"]
+    df_2026 = clean_column_names(fetch_data(
+        GOOGLE_SHEET_TITLES["2026-27"],
+        "Overall",
+        GOOGLE_JSON_STUDENT_PATHS["2026-27"]
     ))
 
+    # -----------------------------
+    # Fetch TC Lists
+    # -----------------------------
+    df_tc_2024 = clean_column_names(fetch_data(
+        GOOGLE_SHEET_TITLES["2024-25"],
+        TC_APPLIED_SHEET_NAME,
+        GOOGLE_JSON_STUDENT_PATHS["2024-25"]
+    ))
 
-    # Tag academic year
+    df_tc_2025 = clean_column_names(fetch_data(
+        GOOGLE_SHEET_TITLES["2025-26"],
+        TC_APPLIED_SHEET_NAME,
+        GOOGLE_JSON_STUDENT_PATHS["2025-26"]
+    ))
+
+    # -----------------------------
+    # Academic Year
+    # -----------------------------
     df_2024["academic_year"] = "2024-25"
     df_2025["academic_year"] = "2025-26"
+    df_2026["academic_year"] = "2026-27"
 
-    # Ensure no NaN in unique key column
-    df_2024 = df_2024.dropna(subset=[UNIQUE_KEY])
-    df_2025 = df_2025.dropna(subset=[UNIQUE_KEY])
+    # -----------------------------
+    # Clean Admission Numbers
+    # -----------------------------
+    for df in [df_2024, df_2025, df_2026]:
+        df.dropna(subset=[UNIQUE_KEY], inplace=True)
+        df[UNIQUE_KEY] = df[UNIQUE_KEY].astype(str).str.strip()
+        df["GRADES"] = pd.to_numeric(df["GRADES"], errors="coerce")
 
-    # Get sets of unique keys
+    for df in [df_tc_2024, df_tc_2025]:
+        df[UNIQUE_KEY] = df[UNIQUE_KEY].astype(str).str.strip()
+
+    # -----------------------------
+    # Admission Number Sets
+    # -----------------------------
     codes_2024 = set(df_2024[UNIQUE_KEY])
     codes_2025 = set(df_2025[UNIQUE_KEY])
-    tc_applied_ids = set(df_tc_applied[UNIQUE_KEY])
+    codes_2026 = set(df_2026[UNIQUE_KEY])
 
-    # Determine who left and who is new
-    left = codes_2024 - codes_2025
-    new = codes_2025 - codes_2024
+    # -----------------------------
+    # TC Applied Sets
+    # -----------------------------
+    tc_applied_2024 = set(df_tc_2024[UNIQUE_KEY].dropna())
+    tc_applied_2025 = set(df_tc_2025[UNIQUE_KEY].dropna())
 
-    # Find graduates = left students in max grade
-    max_grade = df_2024["GRADES"].max()
-    graduates = set(
-        df_2024[(df_2024["GRADES"] == max_grade) & (df_2024[UNIQUE_KEY].isin(left))][UNIQUE_KEY]
+    # -----------------------------
+    # Compare Years
+    # -----------------------------
+    left_2024 = codes_2024 - codes_2025
+    new_2025 = codes_2025 - codes_2024
+
+    left_2025 = codes_2025 - codes_2026
+    new_2026 = codes_2026 - codes_2025
+
+    # -----------------------------
+    # Maximum Grade (Alumni)
+    # -----------------------------
+    max_grade_2024 = df_2024["GRADES"].max()
+    max_grade_2025 = df_2025["GRADES"].max()
+
+    graduates_2024 = set(
+        df_2024[
+            (df_2024["GRADES"] == max_grade_2024) &
+            (df_2024[UNIQUE_KEY].isin(left_2024))
+        ][UNIQUE_KEY]
     )
 
-    # 🔹 Assign status_id for 2024
-    def get_status_2024(x):
-        if x in graduates:
-            return 4  # Graduated
-        elif x in tc_applied_ids:
-            return 5  # TC Applied
-        elif x in left:
-            return 2  # Not coming
-        else:
-            return 1  # Continuing
+    graduates_2025 = set(
+        df_2025[
+            (df_2025["GRADES"] == max_grade_2025) &
+            (df_2025[UNIQUE_KEY].isin(left_2025))
+        ][UNIQUE_KEY]
+    )
 
-    df_2024["status_id"] = df_2024[UNIQUE_KEY].apply(get_status_2024)
+    # -----------------------------
+    # Status Function
+    # -----------------------------
+    def get_status(adm_no, tc_set, graduate_set, left_set, new_set):
+        if adm_no in tc_set:
+            return 5      # TC Applied
+        if adm_no in graduate_set:
+            return 4      # Alumni / Graduated
+        if adm_no in new_set:
+            return 3      # New Admissions
+        if adm_no in left_set:
+            return 2      # Not Coming
+        return 1          # Continuing
 
-    # 🔹 Assign status_id for 2025
+    # -----------------------------
+    # Assign Status
+    # -----------------------------
+    df_2024["status_id"] = df_2024[UNIQUE_KEY].apply(
+        lambda x: get_status(x, tc_applied_2024, graduates_2024, left_2024, set())
+    )
+
     df_2025["status_id"] = df_2025[UNIQUE_KEY].apply(
-        lambda x: 3 if x in new else 1
+        lambda x: get_status(x, tc_applied_2025, graduates_2025, left_2025, new_2025)
     )
 
-    # Merge and return
-    return pd.concat([df_2024, df_2025], ignore_index=True)
+    # Current academic year
+    df_2026["status_id"] = df_2026[UNIQUE_KEY].apply(
 
+    lambda x: get_status(x, set(), set(), set(), new_2026)
+
+)
+
+    # -----------------------------
+    # Merge All Years
+    # -----------------------------
+    return pd.concat(
+        [df_2024, df_2025, df_2026],
+        ignore_index=True
+    )
 
 # %%
 def clean_data(df):
@@ -303,7 +373,13 @@ def clean_data(df):
         na_position='last'  # Non-null values come first
     )
     
-    df["academic_year_id"] = df["academic_year"].apply(lambda x: 1 if x== "2024-25" else 2)
+    academic_year_map = {
+    "2024-25": 1,
+    "2025-26": 2,
+    "2026-27": 3,
+}
+
+    df["academic_year_id"] = df["academic_year"].map(academic_year_map)
     
     # 🧾 Save CSV for auditing
     students_path = os.path.join(OUTPUT_DIR, "students_data.csv")
@@ -387,7 +463,7 @@ def update_database(df, table_name):
         day_wise_df = df.replace({pd.NA: None, np.nan: None})
         print(f"⏳ Inserting data into '{table_name}'...")
 
-        df.to_sql(name=table_name, con=engine, if_exists='replace', index=False, method='multi', chunksize=500)
+        df.to_sql(name=table_name, con=engine, if_exists='append', index=False, method='multi', chunksize=500)
 
         with engine.connect() as conn:
             result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name};"))
@@ -415,6 +491,18 @@ if __name__ == "__main__":
     print("🎉 All done! Both 'student_list' and 'students' tables updated successfully.")
 
 
+# %%
+students_df[["adm_no", "academic_year_id", "status_id"]].head(10)
+
+# %%
+students_df[(students_df["academic_year_id"] == 3) & (students_df["status_id"] == 3)].reset_index(drop=True).sort_values(by=["adm_no"]).head(10)
+
+# %%
+student_list_df
+
+# %%
+
+
 # %% [markdown]
 # <h2 align="center"><b>FEE REPORTS</b></h2>
 
@@ -426,11 +514,13 @@ if __name__ == "__main__":
 GOOGLE_JSON_FEE_DATA_PATHS = {
     "2024-25": os.getenv("GOOGLE_JSON_FEE_DATA_PATH_2024_25"),
     "2025-26": os.getenv("GOOGLE_JSON_FEE_DATA_PATH_2025_26"),
+    "2026-27": os.getenv("GOOGLE_JSON_FEE_DATA_PATH_2026_27")
 }
 
 GOOGLE_JSON_FEE_PATHS = {
     "2024-25": os.getenv("GOOGLE_JSON_FEE_PATH_2024_25"),
     "2025-26": os.getenv("GOOGLE_JSON_FEE_PATH_2025_26"),
+    "2026-27": os.getenv("GOOGLE_JSON_FEE_PATH_2026_27")
 }
 
 UNIQUE_KEY = os.getenv("UNIQUE_KEY")
@@ -469,10 +559,15 @@ def merge_and_tag():
         GOOGLE_JSON_FEE_PATHS["2025-26"], "Overall Sheet", GOOGLE_JSON_FEE_DATA_PATHS["2025-26"]
     ))
 
+    df_2026 = clean_column_names(fetch_data(
+        GOOGLE_JSON_FEE_PATHS["2026-27"], "Overall Sheet", GOOGLE_JSON_FEE_DATA_PATHS["2026-27"]
+    ))
+
     df_2024["academic_year"] = "2024-25"
     df_2025["academic_year"] = "2025-26"
+    df_2026["academic_year"] = "2026-27"
 
-    return pd.concat([df_2024, df_2025], ignore_index=True)
+    return pd.concat([df_2024, df_2025, df_2026], ignore_index=True)
 
 # %% [markdown]
 # ## **Function for Cleaning Data**
@@ -505,13 +600,18 @@ def clean_data(df):
 
     # 🔢 Add serial number
     df["sno"] = range(1, len(df) + 1)
-    df = df.sort_values(by=["sno"])
 
     # 💰 Calculate total fees
     df["total_fees"] = df["total_fee_paid"] + df["discount_concession"] + df["total_fee_due"] + df["exempted"]
 
     # 🆔 Academic year mapping
-    df['academic_year_id'] = df['academic_year'].apply(lambda x: 1 if x == "2024-25" else 2)
+    year_map = {
+    "2024-25": 1,
+    "2025-26": 2,
+    "2026-27": 3
+}
+
+    df["academic_year_id"] = df["academic_year"].map(year_map)
     df = df.sort_values(by=["academic_year_id", "classno", "student_name"], ascending=[True, True, True])
 
     # 📂 Save main fees report
@@ -526,9 +626,11 @@ def clean_data(df):
     payment_status_df = df[["payment_status"]].sort_values(by="payment_status").drop_duplicates().reset_index(drop=True).copy()
     payment_status_df["payment_status_id"] = range(1, len(payment_status_df) + 1)
     payment_status_df = payment_status_df[["payment_status_id", "payment_status"]]
-    payment_status_df.to_csv(r"D:\GITHUB\kotak-school-dbms\output_data\payment_status_table.csv", index=False)
+    payment_status_path = os.path.join(OUTPUT_DIR, "payment_status_table.csv")
+    payment_status_df.to_csv(payment_status_path, index=False)
     print("✅ Fees Report & Payment Status Table created successfully.\n")
 
+    df["staff_name"] = df["staff_name"].fillna("").astype(str).str.strip()
     
     # 📂 Create staff child table
     df["staff"] = np.where(df['staff_name'].notnull() & df['staff_name'].str.strip().ne(''),1,0)    
@@ -539,9 +641,10 @@ def clean_data(df):
     # Assign staff IDs sequentially
     staff_child_df["staff_id"] = range(1, len(staff_child_df) + 1)
 
+
     # Save staff child table
-    fees_path = os.path.join(OUTPUT_DIR, "staff_child_table.csv")
-    staff_child_df.to_csv(fees_path, index=False)
+    staff_child_path = os.path.join(OUTPUT_DIR, "staff_child_table.csv")
+    staff_child_df.to_csv(staff_child_path, index=False)
     print("✅ Staff Child Table created successfully.\n")
 
     # --- Step 1: Merge Payment Status ---
@@ -554,7 +657,7 @@ def clean_data(df):
     merge_keys = ["staff_name"]
     staff_child_clean = staff_child_df.drop(
         columns=[col for col in staff_child_df.columns if col in df.columns and col not in merge_keys],
-        errors="ignore"
+        errors="ignore" 
     )
     df = df.merge(staff_child_clean, on=merge_keys, how="left")
 
@@ -675,7 +778,7 @@ def update_database(df):
         df.to_sql(
             name=TABLE_NAME,
             con=engine,
-            if_exists='replace',
+            if_exists='append',
             index=False,
             method='multi',
             chunksize=1000
@@ -741,6 +844,7 @@ login_url = "https://app.myskoolcom.tech/kotak_vizag/login"
 urls_to_fetch = [
     "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_reports_day_wise_receipt_wise_print?academic_years_id=1",
     "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_reports_day_wise_receipt_wise_print?academic_years_id=7",
+    "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_reports_day_wise_receipt_wise_print?academic_years_id=8"
 ]
 
 TABLE_NAME = "daywise_fees_collection"
@@ -757,6 +861,8 @@ def get_academic_year_from_url(url):
         return "2024-25"
     elif "academic_years_id=7" in url:
         return "2025-26"
+    elif "academic_years_id=8" in url:
+        return "2026-27"
     else:
         raise ValueError(f"Unexpected academic_years_id in URL: {url}")
 
@@ -875,7 +981,7 @@ def clean_and_tag_data(df, academic_year, account_name, payment_mode):
         df = df[df["ReceivedAmount"]>=400]
 
     # --- Add metadata ---
-    df["academic_year_id"] = 1 if academic_year == "2024-25" else 2
+    df["academic_year_id"] = 1 if academic_year == "2024-25" else 2 if academic_year == "2025-26" else 3
     df["account_name"] = account_name or "Unknown"
     df["payment_mode"] = payment_mode or "Unknown"
 
@@ -981,7 +1087,7 @@ def update_database(df, truncate=True):
         df.to_sql(
             name=TABLE_NAME,
             con=engine,
-            if_exists='replace',
+            if_exists='append',
             index=False,
             method='multi',
             chunksize=1000
@@ -1073,11 +1179,13 @@ logging.basicConfig(filename="fee_collection_merge.log", level=logging.ERROR)
 login_url = "https://app.myskoolcom.tech/kotak_vizag/login"
 
 urls = {
-    "2024_25": "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_consolidate_report_print?&from=2025-04-01&academic_years_id=1&status=1&imageField=Search",
-    "2025_26": "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_consolidate_report_print?&from=2024-04-01&academic_years_id=7&status=1&imageField=Search"
+    "2024_25": "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_consolidate_report_print?&from=2024-04-01&academic_years_id=1&status=1&imageField=Search",
+    "2025_26": "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_consolidate_report_print?&from=2025-04-01&academic_years_id=7&status=1&imageField=Search",
+    "2026_27": "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_consolidate_report_print?&from=2026-04-01&academic_years_id=8&status=1&imageField=Search"
 }
 
 TABLE_NAME = "fees_collection"
+
 
 # %%
 
@@ -1130,6 +1238,12 @@ def clean_data(df, academic_year):
                       'Total_Fee_Paid', 'Discount_Concession', 'Total_Due']
         df = df.drop(columns=["SNo", "Abacus1", "Abacus2", "TermFee1", "TermFee2"])
 
+    elif academic_year == "2026_27":
+        df.columns = ['SNo', 'AdmissionNo', 'Name', 'Abacus1', 'TermFee1', 'TermFee2',
+                      'Total_Fees', 'Abacus2', 'TermFee3', 'TermFee4',
+                      'Total_Fee_Paid', 'Discount_Concession', 'Total_Due']
+        df = df.drop(columns=["SNo", "Abacus1", "Abacus2", "TermFee1", "TermFee2", "TermFee3", "TermFee4"])
+
     else:
         raise ValueError(f"Unknown academic year structure: {academic_year}")
 
@@ -1143,11 +1257,15 @@ def clean_data(df, academic_year):
         )
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
 
-    df["academic_year_id"] = 1 if academic_year =="2024_25" else 2
+    df["academic_year_id"] = 1 if academic_year =="2024_25" else 2 if academic_year == "2025_26" else 3
 
+    df_2026 = df[df["academic_year_id"] == 3]
+    df_2026.to_csv(os.path.join(OUTPUT_DIR, "fees_collection_2026_27_1.csv"), index=False)
     # df = df[~((df["AdmissionNo"].str.extract(r"(\d+)").astype(int) > 17164) & (df["academic_year_id"] == 1))].copy()
 
-    df.to_csv(f"D:\\GITHUB\\kotak-school-dbms\\output_data\\fees_collection.csv", index=False)
+    master_path = os.path.join(OUTPUT_DIR, "fees_collection.csv")
+
+    df.to_csv(master_path, index=False)
     df = df.drop(columns=["Name"])
     return df
 
@@ -1184,7 +1302,7 @@ def update_database(df, table_name):
             print(f"✅ Table '{table_name}' cleared.")
         df.columns = df.columns.str.lower()
         print(f"📥 Inserting {len(df)} rows...")
-        df.to_sql(name=table_name, con=engine, if_exists='replace', index=False, method='multi', chunksize=1000)
+        df.to_sql(name=table_name, con=engine, if_exists='append', index=False, method='multi', chunksize=1000)
         print(f"✅ Inserted into '{table_name}' successfully.")
     except Exception as e:
         print(f"❌ Error inserting: {e}")
@@ -1215,7 +1333,7 @@ def main():
         return
 
     # Save CSV (optional)
-    merged_df.to_csv("D:\GITHUB\kotak-school-dbms\source_data\merged_fee_collection.csv", index=False)
+    merged_df.to_csv(os.path.join(BASE_DIR, "output_data/merged_fee_collection"), index=False)
     print("📁 Saved to merged_fee_collection.csv")
 
     # Ensure table exists
@@ -1239,6 +1357,7 @@ if __name__ == "__main__":
 login_url = "https://app.myskoolcom.tech/kotak_vizag/login"
 data_url_2024_25 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=1"
 data_url_2025_26 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=7"
+data_url_2026_27 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=8"
 
 TABLE_NAME = "fee_concession_report"
 fee_concession_report_path = os.path.join(OUTPUT_DIR, "fee_concession_report.csv")
@@ -1377,194 +1496,26 @@ def main():
 
     df_2024_25 = fetch_all_concession_tables(session, data_url_2024_25)
     df_2025_26 = fetch_all_concession_tables(session, data_url_2025_26)
+    df_2026_27 = fetch_all_concession_tables(session, data_url_2026_27)
 
-    if df_2024_25 is None or df_2025_26 is None:
-        print("❌ Could not fetch data for one or both academic years.")
+    if df_2024_25 is None or df_2025_26 is None or df_2026_27 is None:
+        print("❌ Could not fetch data for one or more academic years.")
         return
 
     df_2024_25["academic_year"] = "2024-25"
     df_2025_26["academic_year"] = "2025-26"
+    df_2026_27["academic_year"] = "2026-27"
 
-    merged_df = pd.concat([df_2024_25, df_2025_26], ignore_index=True)
-
-    print("✅ Data extracted successfully! Cleaning data...\n")
-    cleaned_df = clean_data(merged_df)
-
-    output_file = r"D:\\GITHUB\\kotak-school-dbms\\output_data\\fee_concession_report_combined.csv"
-    cleaned_df.to_csv(output_file, index=False)
-    print(cleaned_df.columns)
-    print(f"✅ Data saved to '{output_file}'\n")
-
-    update_database(cleaned_df, TABLE_NAME, POSTGRES_CREDENTIALS)
-    print(f"✅ {len(cleaned_df)} records entered into the database")
-
-    print(cleaned_df.to_string())
-
-
-# %%
-# ------------------ Run Script ------------------
-if __name__ == "__main__":
-    main()
-
-# %% [markdown]
-# <h2 align="center"><b>FEE CONCESSION REPORT</b></h2>
-
-# %%
-# ------------------ Configuration ------------------
-login_url = "https://app.myskoolcom.tech/kotak_vizag/login"
-data_url_2024_25 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=1"
-data_url_2025_26 = "https://app.myskoolcom.tech/kotak_vizag/office_fee/fee_discounts_report_receipt_wise_print?&academic_years_id=7"
-
-TABLE_NAME = "fee_concession_report"
-fee_concession_path = os.path.join(OUTPUT_DIR, "fee_concession_report.csv")
-
-# %%
-# ------------------ Login Function ------------------
-def login_to_website():
-    session = requests.Session()
-    login_response = session.post(login_url, data=credentials)
-
-    if login_response.status_code != 200:
-        print("❌ Login request failed! Server error.\n")
-        return None
-
-    soup = BeautifulSoup(login_response.text, "html.parser")
-    if soup.find("div", class_="alert-danger"):
-        print("❌ Login failed! Check credentials.\n")
-        return None
-
-    print("✅ Login successful!\n")
-    return session
-
-# %%
-# ------------------ Fetch Table Data ------------------
-def fetch_all_concession_tables(session, data_url):
-    response = session.get(data_url)
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    tables = soup.find_all("table", class_="table_view")
-    if not tables:
-        print("❌ No fee tables found! The page structure may have changed.")
-        return None
-
-    all_data = []
-    for table in tables:
-        df = table_to_dataframe(table)
-        if df is not None:
-            all_data.append(df)
-
-    if not all_data:
-        print("❌ No data extracted from tables.")
-        return None
-
-    return pd.concat(all_data, ignore_index=True)
-
-# %%
-# ------------------ HTML Table to DataFrame ------------------
-def table_to_dataframe(table):
-    headers = [th.get_text(strip=True) for th in table.find_all("th")]
-    if len(headers) > 8:
-        headers = headers[:8]
-
-    rows = []
-    for tr in table.find_all("tr")[1:]:
-        cells = [td.get_text(strip=True) for td in tr.find_all("td")]
-        if len(cells) >= 8:
-            rows.append(cells[:8])
-
-    return pd.DataFrame(rows, columns=headers) if rows else None
-
-# %%
-# ------------------ Clean DataFrame ------------------
-def clean_data(df):
-    df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
-    df = df.dropna(subset=["student_number"])
-    df["student_number"] = df["student_number"].astype(str).str.strip()
-    df["discount_given"] = pd.to_numeric(df["discount_given"], errors="coerce").fillna(0.00)
-    df.drop(columns=['receipt_no', 'fee_name', 'fee_amount', 'total_due_amount'], errors="ignore", inplace=True)
-    df["date"] = pd.to_datetime(df["date"].astype(str).str.strip(), errors="coerce").dt.date
-    df = df.dropna(subset=["date"])
-
-    df["id"] = range(1, len(df) + 1)
-
-    # Ensure academic_year is kept if present
-    cols = ['id', 'date', 'student_number', 'student_name', 'discount_given']
-    if "academic_year" in df.columns:
-        cols.append("academic_year")
-
-    df = df[cols]
-    df.reset_index(drop=True, inplace=True)
-
-    df['academic_year_id'] = df['academic_year'].apply(
-        lambda x: 1 if x == "2024-25" else 2 if x == "2025-26" else None
-    )
-    
-    df.to_csv(fee_concession_path, index=False)
-    print(f"✅ Cleaned data saved to {OUTPUT_DIR}\n")
-
-    df = df.drop(columns=['student_name', "academic_year"], errors="ignore")
-
-    return df
-
-# %%
-def update_database(df: pd.DataFrame, table_name: str, postgres_credentials: dict):
-
-    try:
-        with engine.begin() as conn:
-            print(f"🔄 Connecting to database {postgres_credentials['database']}...")
-
-            # ✅ Create table if not exists
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS {table_name} (
-                    id SERIAL PRIMARY KEY,
-                    date DATE,
-                    student_number VARCHAR(20),
-                    discount_given NUMERIC(10, 2),
-                    academic_year_id INTEGER
-                );
-            """))
-            print(f"✅ Ensured '{table_name}' table exists.")
-
-            # 🔄 Clear existing records
-            print(f"⚠️ Deleting existing records from: {table_name}")
-            conn.execute(text(f"DELETE FROM {table_name};"))
-            print(f"✅ Table '{table_name}' cleared.\n")
-
-        # 📥 Insert Data
-        print(f"📥 Inserting data into {table_name} table...")
-        df.to_sql(name=table_name, con=engine, if_exists="append", index=False, method="multi", chunksize=1000)
-        print(f"✅ Data successfully inserted into '{table_name}' table.\n")
-
-    except Exception as e:
-        logging.error(f"❌ Error updating database: {e}", exc_info=True)
-        print(f"❌ Error occurred while updating database: {e}")
-
-    finally:
-        engine.dispose()
-
-
-# %%
-def main():
-    session = login_to_website()
-    if session is None:
-        return
-
-    df_2024_25 = fetch_all_concession_tables(session, data_url_2024_25)
-    df_2025_26 = fetch_all_concession_tables(session, data_url_2025_26)
-
-    if df_2024_25 is None or df_2025_26 is None:
-        print("❌ Could not fetch data for one or both academic years.")
-        return
-
-    df_2024_25["academic_year"] = "2024-25"
-    df_2025_26["academic_year"] = "2025-26"
-
-    merged_df = pd.concat([df_2024_25, df_2025_26], ignore_index=True)
+    merged_df = pd.concat([df_2024_25, df_2025_26, df_2026_27], ignore_index=True)
 
     print("✅ Data extracted successfully! Cleaning data...\n")
     cleaned_df = clean_data(merged_df)
 
-    output_file = r"D:\\GITHUB\\kotak-school-dbms\\output_data\\fee_concession_report_combined.csv"
+    output_file = os.path.join(
+    BASE_DIR,
+    "output_data",
+    "fee_concession_report_combined.csv"
+)
     cleaned_df.to_csv(output_file, index=False)
     print(cleaned_df.columns)
     print(f"✅ Data saved to '{output_file}'\n")
@@ -1592,9 +1543,12 @@ CREDENTIALS = {
     "psw": os.getenv("APP_PSW")
 }
 TABLE_NAME = "fee_transcation_atom_report"
-OUTPUT_PATH = r"D:\GITHUB\kotak-school-dbms\output_data\fee_transcation_atom_report.csv"
 
-
+OUTPUT_PATH = os.path.join(
+    BASE_DIR,
+    "output_data",
+    "fee_transcation_atom_report.csv"
+)
 
 # %%
 # ------------------ FUNCTIONS ------------------
@@ -1743,33 +1697,36 @@ if __name__ == "__main__":
 # <h2 align="center"><b>ATOM WEBSITE TRANSCATION REPORT</b></h2>
 
 # %%
-# ================= IMPORTS =================
+import os
+print("Current working dir:", os.getcwd())
+
+# %%
 import os
 import sys
 import time
-from datetime import datetime, timedelta
-
 import pandas as pd
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
 from webdriver_manager.chrome import ChromeDriverManager
 
-# ================= ENV =================
+
+# ================= LOAD ENV =================
 load_dotenv()
 
+BASE_DIR = os.getenv("BASE_DIR")
 USERNAME = os.getenv("ATOM_USERNAME")
 PASSWORD = os.getenv("ATOM_PASSWORD")
 
-if not USERNAME or not PASSWORD:
-    print("❌ Missing ATOM credentials")
+if not BASE_DIR or not USERNAME or not PASSWORD:
+    print("❌ Missing environment variables")
     sys.exit(1)
+
 
 # ================= CONFIG =================
 LOGIN_URL = "https://titan.atomtech.in/titan_merchant_console"
@@ -1778,162 +1735,325 @@ TXN_URL = "https://titan.atomtech.in/titan_merchant_console/view-transaction-tem
 FULL_FROM_DATE = datetime.strptime("30/10/2025", "%d/%m/%Y")
 FULL_TO_DATE = datetime.today()
 
-DOWNLOAD_DIR = r"D:\GITHUB\kotak-school-dbms\source_data"
+MAX_DAYS = 60  # 🔥 SAFE RANGE
+
+DOWNLOAD_DIR = os.path.join(BASE_DIR, "source_data")
 FINAL_PATH = os.path.join(DOWNLOAD_DIR, "atom_report.xlsx")
-MAX_DAYS = 90
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# ================= CLEAN FINAL FILE =================
-if os.path.exists(FINAL_PATH):
-    os.remove(FINAL_PATH)
-    print("🗑️ Old atom_report.xlsx deleted")
 
-# ================= UTILS =================
-def split_date_ranges(start, end, days=90):
+# ================= DRIVER =================
+def setup_driver():
+    options = webdriver.ChromeOptions()
+
+    prefs = {
+        "download.default_directory": DOWNLOAD_DIR,
+        "download.prompt_for_download": False,
+        "safebrowsing.enabled": True,
+    }
+
+    options.add_experimental_option("prefs", prefs)
+
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-features=DownloadBubble")
+
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
+
+    driver.execute_cdp_cmd(
+        "Page.setDownloadBehavior",
+        {"behavior": "allow", "downloadPath": DOWNLOAD_DIR}
+    )
+
+    return driver
+
+
+# ================= HELPERS =================
+def split_ranges(start, end, days):
     ranges = []
     cur = start
+
     while cur <= end:
         r_end = min(cur + timedelta(days=days - 1), end)
         ranges.append((cur, r_end))
         cur = r_end + timedelta(days=1)
+
     return ranges
 
 
-def wait_for_new_download(existing_files, timeout=60):
+def wait_download(old_files, timeout=180):
     end = time.time() + timeout
+
     while time.time() < end:
-        files = {
-            f for f in os.listdir(DOWNLOAD_DIR)
-            if f.endswith(".xlsx") and not f.endswith(".crdownload")
-        }
-        new_files = files - existing_files
-        if new_files:
-            return new_files.pop()
+        files = os.listdir(DOWNLOAD_DIR)
+
+        for f in files:
+            if f.endswith(".crdownload"):
+                continue
+            if f.endswith(".xlsx") and f not in old_files:
+                path = os.path.join(DOWNLOAD_DIR, f)
+                if os.path.getsize(path) > 0:
+                    return f
+
         time.sleep(1)
+
     return None
 
 
 def has_no_records(driver):
-    """Detect no-records condition safely"""
-    # Text-based detection
-    try:
-        msg = driver.find_element(
-            By.XPATH, "//*[contains(text(),'No') and contains(text(),'Record')]"
-        )
-        if msg.is_displayed():
-            return True
-    except:
-        pass
-
-    # Table row detection (backup)
-    rows = driver.find_elements(By.XPATH, "//table//tbody/tr")
-    if len(rows) == 0:
+    msgs = driver.find_elements(By.XPATH, "//*[contains(text(),'No Record')]")
+    if any(m.is_displayed() for m in msgs):
         return True
 
-    return False
+    rows = driver.find_elements(By.XPATH, "//table//tbody/tr")
+    for r in rows:
+        txt = r.text.strip()
+        if txt and "No Record" not in txt:
+            return False
 
-# ================= CHROME =================
-prefs = {
-    "download.default_directory": DOWNLOAD_DIR,
-    "download.prompt_for_download": False,
-    "safebrowsing.enabled": True
-}
+    return True
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option("prefs", prefs)
-options.add_argument("--start-maximized")
-options.add_argument("--disable-blink-features=AutomationControlled")
 
-driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
-    options=options
-)
+def set_dates(driver, from_date, to_date):
+    driver.execute_script("""
+        function setDate(id, value) {
+            let el = document.getElementById(id);
+            el.value = value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('blur', { bubbles: true }));
+        }
+        setDate('fromDate', arguments[0]);
+        setDate('toDate', arguments[1]);
+    """, from_date, to_date)
 
-wait = WebDriverWait(driver, 60)
 
 # ================= LOGIN =================
-print("🔐 Logging in...")
-driver.get(LOGIN_URL)
+def login(driver, wait):
+    print("🔐 Logging in...")
 
-wait.until(EC.presence_of_element_located((By.ID, "userName")))
-driver.find_element(By.ID, "userName").send_keys(USERNAME)
-driver.find_element(By.ID, "password").send_keys(PASSWORD)
-driver.find_element(By.XPATH, "//button[contains(text(),'Login')]").click()
+    driver.get(LOGIN_URL)
 
-wait.until(EC.presence_of_element_located((By.TAG_NAME, "nav")))
-print("✅ Login success")
+    wait.until(EC.presence_of_element_located((By.ID, "userName"))).send_keys(USERNAME)
+    driver.find_element(By.ID, "password").send_keys(PASSWORD)
 
-# ================= TRANSACTIONS =================
-driver.get(TXN_URL)
-wait.until(EC.presence_of_element_located((By.ID, "fromDate")))
+    driver.find_element(By.XPATH, "//button[contains(text(),'Login')]").click()
 
-date_ranges = split_date_ranges(FULL_FROM_DATE, FULL_TO_DATE, MAX_DAYS)
-all_dfs = []
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "nav")))
 
-for start, end in date_ranges:
-    from_date = start.strftime("%d/%m/%Y")
-    to_date = end.strftime("%d/%m/%Y")
+    print("✅ Login successful")
 
-    print(f"⬇️ Fetching {from_date} → {to_date}")
 
-    existing_files = set(os.listdir(DOWNLOAD_DIR))
+# ================= DOWNLOAD =================
+def download_transactions(driver, wait):
 
-    # Set date filters
-    driver.find_element(By.ID, "fromDate").clear()
-    driver.find_element(By.ID, "fromDate").send_keys(from_date)
+    driver.get(TXN_URL)
+    wait.until(EC.presence_of_element_located((By.ID, "fromDate")))
 
-    driver.find_element(By.ID, "toDate").clear()
-    driver.find_element(By.ID, "toDate").send_keys(to_date)
-    driver.find_element(By.ID, "toDate").send_keys(Keys.TAB)
+    ranges = split_ranges(FULL_FROM_DATE, FULL_TO_DATE, MAX_DAYS)
+    all_dfs = []
 
-    wait.until(EC.element_to_be_clickable((By.ID, "search"))).click()
-    time.sleep(3)
+    for start, end in ranges:
+        try:
+            from_date = start.strftime("%d/%m/%Y")
+            to_date = end.strftime("%d/%m/%Y")
 
-    # 🔴 NO RECORDS CHECK
-    if has_no_records(driver):
-        print(f"⚠️ No records for {from_date} → {to_date}, skipping")
-        continue
+            print(f"⬇️ Fetching {from_date} → {to_date}")
 
-    # Download only if records exist
-    driver.execute_script("""
-        if (typeof downloadData === 'function') {
-            downloadData('.xlsx');
-        }
-    """)
+            old_files = set(os.listdir(DOWNLOAD_DIR))
 
-    downloaded = wait_for_new_download(existing_files)
+            # 🔥 Reset filters
+            try:
+                driver.find_element(By.XPATH, "//button[contains(text(),'Reset')]").click()
+                time.sleep(2)
+            except:
+                pass
 
-    if not downloaded:
-        print(f"❌ Download failed for {from_date} → {to_date}")
-        continue
+            # 🔥 Set dates (React fix)
+            set_dates(driver, from_date, to_date)
+            time.sleep(1)
 
-    file_path = os.path.join(DOWNLOAD_DIR, downloaded)
-    df = pd.read_excel(file_path)
-    all_dfs.append(df)
+            # 🔥 Double search click (UI bug)
+            search_btn = wait.until(EC.element_to_be_clickable((By.ID, "search")))
+            search_btn.click()
+            time.sleep(2)
+            search_btn.click()
 
-    os.remove(file_path)  # cleanup temp file
-    print("✅ Appended & cleaned")
+            time.sleep(5)
 
-# ================= FINAL MERGE =================
-if not all_dfs:
-    print("❌ No data downloaded")
+            rows = driver.find_elements(By.XPATH, "//tbody/tr")
+            print("Rows found:", len(rows))
+
+            for i, r in enumerate(rows[:5]):
+                print(i, repr(r.text))
+
+            # if has_no_records(driver):
+            #     print(f"⚠️ No records for {from_date} → {to_date}")
+            #     continue
+
+            print("Ignoring no-record check...")
+
+            from selenium.webdriver.common.action_chains import ActionChains
+
+            excel_btn = wait.until(
+    EC.presence_of_element_located(
+        (By.XPATH, "//button[contains(., 'XLSX')]")
+    )
+)
+
+            print("Displayed:", excel_btn.is_displayed())
+            print("Enabled:", excel_btn.is_enabled())
+
+            print(driver.execute_script("""
+            return {
+                ready: document.readyState,
+                onclick: arguments[0].getAttribute('onclick')
+            }
+            """, excel_btn))
+
+            ActionChains(driver).move_to_element(excel_btn).pause(0.5).click().perform()
+
+            driver.execute_script("arguments[0].click();", excel_btn)
+
+            file = wait_download(old_files)
+
+            print("Downloaded:", file)
+
+            path = os.path.join(DOWNLOAD_DIR, file)
+
+            print("Exists:", os.path.exists(path))
+            print("Size:", os.path.getsize(path))
+
+            print(driver.execute_script("""
+return {
+    exists: typeof downLoadData,
+    ready: document.readyState
+}
+"""))
+
+            if not file:
+                print("❌ Download failed")
+                continue
+
+            path = os.path.join(DOWNLOAD_DIR, file)
+
+            try:
+                df = pd.read_excel(path)
+                print(df.head())
+                print("Rows:", len(df))
+                all_dfs.append(df)
+            except Exception as e:
+                print("READ ERROR:", e)
+
+            os.remove(path)
+
+            print("✅ File processed")
+
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            raise
+
+    return all_dfs
+
+
+
+
+# %%
+# ================= MAIN =================
+def main():
+
+    if os.path.exists(FINAL_PATH):
+        os.remove(FINAL_PATH)
+
+    driver = setup_driver()
+    wait = WebDriverWait(driver, 60)
+
+    login(driver, wait)
+
+    dfs = download_transactions(driver, wait)
+
     driver.quit()
-    sys.exit(1)
 
-final_df = pd.concat(all_dfs, ignore_index=True)
-final_df.to_excel(FINAL_PATH, index=False)
+    if not dfs:
+        print("❌ No data")
+        sys.exit(1)
 
-print("🎉 atom_report.xlsx created successfully")
+    final_df = pd.concat(dfs, ignore_index=True)
+    final_df.to_excel(FINAL_PATH, index=False)
 
-driver.quit()
+    print("🎉 atom_report.xlsx created successfully")
+
+
+# ================= RUN =================
+if __name__ == "__main__":
+    main()
+
+# %%
 
 
 # %%
-time.sleep(10)
+# time.sleep(10)
+
+# %% [markdown]
+# **MANUAL WORK**
 
 # %%
-file_path = r"D:\GITHUB\kotak-school-dbms\source_data\atom_report.xlsx"
+# import os
+# import pandas as pd
+
+# # 📁 Folder path
+# DOWNLOAD_DIR = r"/Users/harikiran/Documents/GitHub/kotak-salesian-school-dbms/source_data"   # 🔁 change this
+# OUTPUT_FILE = os.path.join(DOWNLOAD_DIR, "atom_report.xlsx")
+
+# all_dfs = []
+
+# # 🔍 Read only Transaction files
+# for file in os.listdir(DOWNLOAD_DIR):
+#     if file.startswith("TXN") and file.endswith(".xlsx") and not file.startswith("~"):
+#         path = os.path.join(DOWNLOAD_DIR, file)
+#         print(f"📄 Reading: {file}")
+
+#         try:
+#             df = pd.read_excel(path)
+
+#             # optional: track source file
+#             df["source_file"] = file
+
+#             all_dfs.append(df)
+
+#         except Exception as e:
+#             print(f"⚠️ Error reading {file}: {e}")
+
+# # ❌ No valid files
+# if not all_dfs:
+#     print("❌ No Transaction files found")
+#     exit()
+
+# # 🔗 Merge all files
+# final_df = pd.concat(all_dfs, ignore_index=True)
+
+
+# # 📅 Optional: sort by date column if exists
+# DATE_COLUMNS = ["Date", "Txn Date", "Transaction Date"]
+
+# for col in DATE_COLUMNS:
+#     if col in final_df.columns:
+#         print(f"📅 Sorting by: {col}")
+#         final_df[col] = pd.to_datetime(final_df[col], errors='coerce')
+#         final_df.sort_values(by=col, inplace=True)
+#         break
+
+# # 💾 Save final output
+# final_df.to_excel(OUTPUT_FILE, index=False)
+
+# print(f"🎉 Final merged file created: {OUTPUT_FILE}")
+
+# %%
+file_path = r"/Users/harikiran/Documents/GitHub/kotak-salesian-school-dbms/source_data/atom_report.xlsx"
 
 warnings.filterwarnings(
     "ignore",
@@ -1944,7 +2064,7 @@ warnings.filterwarnings(
 
 df = pd.read_excel(file_path)
 
-df.head(3)
+df
 
 
 # %%
@@ -2055,6 +2175,13 @@ print(f"🧹 Cleaned Excel saved to: {atom_list_path}")
 df.info()
 
 # %%
+df.head()
+
+# %%
+df.to_csv(os.path.join(OUTPUT_DIR, "atom_report_cleaned.csv"), index=False)
+print("✅ Cleaned CSV saved successfully!")
+
+# %%
 TABLE_NAME = "atom_transaction_report"
 
 # --- Step 1: Create Table (if not exists) ---
@@ -2064,7 +2191,7 @@ with engine.begin() as conn:
         id SERIAL PRIMARY KEY,
         admission_no BIGINT,
         student_name TEXT,
-        phone BIGINT,
+        phone TEXT,
         amount NUMERIC(12,2),
         net_amount_to_be_paid NUMERIC(12,2),
         txn_date TIMESTAMP,
@@ -2073,7 +2200,7 @@ with engine.begin() as conn:
         txn_status TEXT,
         product TEXT,
         amount_in_rupees TEXT,
-        customer_acc_no BIGINT,
+        customer_acc_no TEXT,
         merchant_name TEXT,
         merchant_id BIGINT,
         client_code BIGINT,
@@ -2125,10 +2252,11 @@ with engine.connect() as conn:
 
 # %%
 atom_df = pd.read_excel(atom_list_path)
-atom_df.head(3)
+atom_df.tail(3)
 
 # %%
-df = pd.read_csv(r"D:\GITHUB\kotak-school-dbms\output_data\daywise_fees_collection.csv")
+df = pd.read_csv(r"/Users/harikiran/Documents/GitHub/kotak-salesian-school-dbms/output_data/daywise_fees_collection.csv")
+print("Payment Types: ",df['payment_mode'].unique())
 day_wise_df = df[df['payment_mode'] == 'Online Payment'].copy()
 day_wise_df
 
@@ -2171,7 +2299,7 @@ with engine.begin() as conn:
         id SERIAL PRIMARY KEY,
         admission_no BIGINT,
         student_name TEXT,
-        phone BIGINT,
+        phone TEXT,
         amount NUMERIC(12,2),
         net_amount_to_be_paid NUMERIC(12,2),
         txn_date TIMESTAMP,
@@ -2284,6 +2412,9 @@ try:
 
 except Exception as e:
     print("Execution failed:", e)
+
+
+# %%
 
 
 
