@@ -182,141 +182,124 @@ def clean_column_names(df):
 # %%
 TC_APPLIED_SHEET_NAME = "TC LIST"
 
+STATUS_CONTINUING = 1
+STATUS_LEFT = 2
+STATUS_NEW = 3
+STATUS_ALUMNI = 4
+STATUS_TC_APPLIED = 5
+
+
+def get_status(adm_no, tc_set, graduate_set, left_set, new_set):
+    if adm_no in tc_set:
+        return STATUS_TC_APPLIED
+    if adm_no in graduate_set:
+        return STATUS_ALUMNI
+    if adm_no in new_set:
+        return STATUS_NEW
+    if adm_no in left_set:
+        return STATUS_LEFT
+    return STATUS_CONTINUING
+
+
+def load_student_year(year):
+    df = clean_column_names(
+        fetch_data(
+            GOOGLE_SHEET_TITLES[year],
+            "Overall",
+            GOOGLE_JSON_STUDENT_PATHS[year],
+        )
+    )
+
+    df.dropna(subset=[UNIQUE_KEY], inplace=True)
+    df[UNIQUE_KEY] = df[UNIQUE_KEY].astype(str).str.strip()
+    df["GRADES"] = pd.to_numeric(df["GRADES"], errors="coerce")
+    df["academic_year"] = year
+
+    return df
+
+
+def load_tc_year(year):
+    try:
+        df = clean_column_names(
+            fetch_data(
+                GOOGLE_SHEET_TITLES[year],
+                TC_APPLIED_SHEET_NAME,
+                GOOGLE_JSON_STUDENT_PATHS[year],
+            )
+        )
+
+        return set(
+            df[UNIQUE_KEY]
+            .dropna()
+            .astype(str)
+            .str.strip()
+        )
+
+    except Exception:
+        return set()
+
+
 def merge_and_tag():
-    # -----------------------------
-    # Fetch & Clean Student Data
-    # -----------------------------
-    df_2024 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2024-25"],
-        "Overall",
-        GOOGLE_JSON_STUDENT_PATHS["2024-25"]
-    ))
 
-    df_2025 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2025-26"],
-        "Overall",
-        GOOGLE_JSON_STUDENT_PATHS["2025-26"]
-    ))
+    years = ["2024-25", "2025-26", "2026-27"]
 
-    df_2026 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2026-27"],
-        "Overall",
-        GOOGLE_JSON_STUDENT_PATHS["2026-27"]
-    ))
+    students = {year: load_student_year(year) for year in years}
+
+    tc_lists = {
+        year: load_tc_year(year)
+        for year in years[:-1]
+    }
 
     # -----------------------------
-    # Fetch TC Lists
+    # Calculate Status Year by Year
     # -----------------------------
-    df_tc_2024 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2024-25"],
-        TC_APPLIED_SHEET_NAME,
-        GOOGLE_JSON_STUDENT_PATHS["2024-25"]
-    ))
+    for i, year in enumerate(years):
 
-    df_tc_2025 = clean_column_names(fetch_data(
-        GOOGLE_SHEET_TITLES["2025-26"],
-        TC_APPLIED_SHEET_NAME,
-        GOOGLE_JSON_STUDENT_PATHS["2025-26"]
-    ))
+        current = students[year]
+        current_codes = set(current[UNIQUE_KEY])
 
-    # -----------------------------
-    # Academic Year
-    # -----------------------------
-    df_2024["academic_year"] = "2024-25"
-    df_2025["academic_year"] = "2025-26"
-    df_2026["academic_year"] = "2026-27"
+        previous_codes = (
+            set(students[years[i - 1]][UNIQUE_KEY])
+            if i > 0
+            else set()
+        )
 
-    # -----------------------------
-    # Clean Admission Numbers
-    # -----------------------------
-    for df in [df_2024, df_2025, df_2026]:
-        df.dropna(subset=[UNIQUE_KEY], inplace=True)
-        df[UNIQUE_KEY] = df[UNIQUE_KEY].astype(str).str.strip()
-        df["GRADES"] = pd.to_numeric(df["GRADES"], errors="coerce")
+        next_codes = (
+            set(students[years[i + 1]][UNIQUE_KEY])
+            if i < len(years) - 1
+            else set()
+        )
 
-    for df in [df_tc_2024, df_tc_2025]:
-        df[UNIQUE_KEY] = df[UNIQUE_KEY].astype(str).str.strip()
+        tc_set = tc_lists.get(year, set())
 
-    # -----------------------------
-    # Admission Number Sets
-    # -----------------------------
-    codes_2024 = set(df_2024[UNIQUE_KEY])
-    codes_2025 = set(df_2025[UNIQUE_KEY])
-    codes_2026 = set(df_2026[UNIQUE_KEY])
+        left_set = current_codes - next_codes if next_codes else set()
+        new_set = current_codes - previous_codes if previous_codes else set()
 
-    # -----------------------------
-    # TC Applied Sets
-    # -----------------------------
-    tc_applied_2024 = set(df_tc_2024[UNIQUE_KEY].dropna())
-    tc_applied_2025 = set(df_tc_2025[UNIQUE_KEY].dropna())
+        graduate_set = set()
 
-    # -----------------------------
-    # Compare Years
-    # -----------------------------
-    left_2024 = codes_2024 - codes_2025
-    new_2025 = codes_2025 - codes_2024
+        if next_codes:
+            max_grade = current["GRADES"].max()
 
-    left_2025 = codes_2025 - codes_2026
-    new_2026 = codes_2026 - codes_2025
+            graduate_set = set(
+                current[
+                    (current["GRADES"] == max_grade)
+                    & (current[UNIQUE_KEY].isin(left_set))
+                ][UNIQUE_KEY]
+            )
 
-    # -----------------------------
-    # Maximum Grade (Alumni)
-    # -----------------------------
-    max_grade_2024 = df_2024["GRADES"].max()
-    max_grade_2025 = df_2025["GRADES"].max()
+        current["status_id"] = current[UNIQUE_KEY].apply(
+            lambda adm: get_status(
+                adm,
+                tc_set,
+                graduate_set,
+                left_set,
+                new_set,
+            )
+        )
 
-    graduates_2024 = set(
-        df_2024[
-            (df_2024["GRADES"] == max_grade_2024) &
-            (df_2024[UNIQUE_KEY].isin(left_2024))
-        ][UNIQUE_KEY]
-    )
-
-    graduates_2025 = set(
-        df_2025[
-            (df_2025["GRADES"] == max_grade_2025) &
-            (df_2025[UNIQUE_KEY].isin(left_2025))
-        ][UNIQUE_KEY]
-    )
-
-    # -----------------------------
-    # Status Function
-    # -----------------------------
-    def get_status(adm_no, tc_set, graduate_set, left_set, new_set):
-        if adm_no in tc_set:
-            return 5      # TC Applied
-        if adm_no in graduate_set:
-            return 4      # Alumni / Graduated
-        if adm_no in new_set:
-            return 3      # New Admissions
-        if adm_no in left_set:
-            return 2      # Not Coming
-        return 1          # Continuing
-
-    # -----------------------------
-    # Assign Status
-    # -----------------------------
-    df_2024["status_id"] = df_2024[UNIQUE_KEY].apply(
-        lambda x: get_status(x, tc_applied_2024, graduates_2024, left_2024, set())
-    )
-
-    df_2025["status_id"] = df_2025[UNIQUE_KEY].apply(
-        lambda x: get_status(x, tc_applied_2025, graduates_2025, left_2025, new_2025)
-    )
-
-    # Current academic year
-    df_2026["status_id"] = df_2026[UNIQUE_KEY].apply(
-
-    lambda x: get_status(x, set(), set(), set(), new_2026)
-
-)
-
-    # -----------------------------
-    # Merge All Years
-    # -----------------------------
     return pd.concat(
-        [df_2024, df_2025, df_2026],
-        ignore_index=True
+        [students[y] for y in years],
+        ignore_index=True,
     )
 
 # %%
@@ -495,7 +478,7 @@ if __name__ == "__main__":
 students_df[["adm_no", "academic_year_id", "status_id"]].head(10)
 
 # %%
-students_df[(students_df["academic_year_id"] == 3) & (students_df["status_id"] == 3)].reset_index(drop=True).sort_values(by=["adm_no"]).head(10)
+students_df[(students_df["academic_year_id"] == 3) & (students_df["status_id"] == 3)].sort_values(by=["adm_no"]).reset_index(drop=True).head(10)
 
 # %%
 student_list_df
@@ -1755,7 +1738,10 @@ def setup_driver():
 
     options.add_experimental_option("prefs", prefs)
 
-    options.add_argument("--start-maximized")
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-features=DownloadBubble")
 
     driver = webdriver.Chrome(
@@ -2053,7 +2039,7 @@ if __name__ == "__main__":
 # print(f"🎉 Final merged file created: {OUTPUT_FILE}")
 
 # %%
-file_path = r"/Users/harikiran/Documents/GitHub/kotak-salesian-school-dbms/source_data/atom_report.xlsx"
+file_path = os.path.join(SOURCE_DIR, "atom_report.xlsx")
 
 warnings.filterwarnings(
     "ignore",
@@ -2063,9 +2049,7 @@ warnings.filterwarnings(
 )
 
 df = pd.read_excel(file_path)
-
 df
-
 
 # %%
 df.info()
@@ -2255,8 +2239,8 @@ atom_df = pd.read_excel(atom_list_path)
 atom_df.tail(3)
 
 # %%
-df = pd.read_csv(r"/Users/harikiran/Documents/GitHub/kotak-salesian-school-dbms/output_data/daywise_fees_collection.csv")
-print("Payment Types: ",df['payment_mode'].unique())
+df = pd.read_csv(os.path.join(OUTPUT_DIR, "daywise_fees_collection.csv"))
+print("Payment Types: ", df['payment_mode'].unique())
 day_wise_df = df[df['payment_mode'] == 'Online Payment'].copy()
 day_wise_df
 
@@ -2415,6 +2399,3 @@ except Exception as e:
 
 
 # %%
-
-
-

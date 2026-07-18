@@ -1,0 +1,72 @@
+name: Run Student DB Sync
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 2 AM UTC daily
+  workflow_dispatch: # manual trigger from the Actions tab
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install PostgreSQL client (for pg_dump)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Install Chrome (for Selenium/Atom scraping)
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Write Google credentials
+        run: |
+          mkdir -p creds
+          echo '${{ secrets.GOOGLE_JSON_STUDENT_2024_25 }}' > creds/2024_25.json
+          echo '${{ secrets.GOOGLE_JSON_STUDENT_2025_26 }}' > creds/2025_26.json
+          echo '${{ secrets.GOOGLE_JSON_STUDENT_2026_27 }}' > creds/2026_27.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_2024_25 }}' > creds/fee_2024_25.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_2025_26 }}' > creds/fee_2025_26.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_2026_27 }}' > creds/fee_2026_27.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_DATA_2024_25 }}' > creds/fee_data_2024_25.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_DATA_2025_26 }}' > creds/fee_data_2025_26.json
+          echo '${{ secrets.GOOGLE_JSON_FEE_DATA_2026_27 }}' > creds/fee_data_2026_27.json
+
+      - name: Run script
+        env:
+          BASE_DIR: ${{ github.workspace }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_UNAME: ${{ secrets.APP_UNAME }}
+          APP_PSWD: ${{ secrets.APP_PSWD }}
+          ATOM_USERNAME: ${{ secrets.ATOM_USERNAME }}
+          ATOM_PASSWORD: ${{ secrets.ATOM_PASSWORD }}
+          PG_DUMP_PATH: /usr/bin/pg_dump
+          BACKUP_DIR: ${{ github.workspace }}/backups
+          UNIQUE_KEY: ${{ secrets.UNIQUE_KEY }}
+          GOOGLE_SHEET_TITLE_2024_25: ${{ secrets.GOOGLE_SHEET_TITLE_2024_25 }}
+          GOOGLE_SHEET_TITLE_2025_26: ${{ secrets.GOOGLE_SHEET_TITLE_2025_26 }}
+          GOOGLE_SHEET_TITLE_2026_27: ${{ secrets.GOOGLE_SHEET_TITLE_2026_27 }}
+          TC_APPLIED_SHEET_NAME: ${{ secrets.TC_APPLIED_SHEET_NAME }}
+          GOOGLE_JSON_STUDENT_PATH_2024_25: ${{ github.workspace }}/creds/2024_25.json
+          GOOGLE_JSON_STUDENT_PATH_2025_26: ${{ github.workspace }}/creds/2025_26.json
+          GOOGLE_JSON_STUDENT_PATH_2026_27: ${{ github.workspace }}/creds/2026_27.json
+          GOOGLE_JSON_FEE_PATH_2024_25: ${{ github.workspace }}/creds/fee_2024_25.json
+          GOOGLE_JSON_FEE_PATH_2025_26: ${{ github.workspace }}/creds/fee_2025_26.json
+          GOOGLE_JSON_FEE_PATH_2026_27: ${{ github.workspace }}/creds/fee_2026_27.json
+          GOOGLE_JSON_FEE_DATA_PATH_2024_25: ${{ github.workspace }}/creds/fee_data_2024_25.json
+          GOOGLE_JSON_FEE_DATA_PATH_2025_26: ${{ github.workspace }}/creds/fee_data_2025_26.json
+          GOOGLE_JSON_FEE_DATA_PATH_2026_27: ${{ github.workspace }}/creds/fee_data_2026_27.json
+        run: python script.py
