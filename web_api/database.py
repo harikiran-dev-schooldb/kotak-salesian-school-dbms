@@ -4,8 +4,13 @@ from sqlalchemy import Engine, create_engine, inspect, text
 
 
 def create_database_engine(database_url: str) -> Engine:
-    connect_args = {"connect_timeout": 10} if database_url.startswith("postgresql") else {}
-    return create_engine(database_url, pool_pre_ping=True, pool_recycle=300, connect_args=connect_args)
+    normalized_url = database_url
+    if database_url.startswith("postgres://"):
+        normalized_url = "postgresql+psycopg://" + database_url.removeprefix("postgres://")
+    elif database_url.startswith("postgresql://"):
+        normalized_url = "postgresql+psycopg://" + database_url.removeprefix("postgresql://")
+    connect_args = {"connect_timeout": 10} if normalized_url.startswith("postgresql") else {}
+    return create_engine(normalized_url, pool_pre_ping=True, pool_recycle=300, connect_args=connect_args)
 
 
 def table_exists(engine: Engine, table_name: str) -> bool:
