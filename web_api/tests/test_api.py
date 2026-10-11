@@ -91,3 +91,21 @@ def test_attendance_uses_present_status_two_and_masks_students(tmp_path: Path):
         assert payload["latest_date"] == "2026-10-11"
         assert payload["low_attendance"][0]["admission_no"].startswith("ADM•••")
         assert "KSS00456" not in response.text
+
+
+def test_health_reports_missing_database_configuration():
+    settings = Settings(
+        database_url="",
+        environment="production",
+        admin_api_key="admin-test-key",
+        viewer_api_key="viewer-test-key",
+    )
+
+    with TestClient(create_app(settings=settings)) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "configuration_error",
+        "detail": "DATABASE_URL is required",
+    }

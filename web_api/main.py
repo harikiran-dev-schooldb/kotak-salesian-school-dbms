@@ -5,13 +5,15 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 if __package__:
     from .auth import Principal, current_principal, require_admin
     from .config import Settings
-    from .database import create_database_engine, ensure_audit_table
+    from .database import create_database_engine
     from .queries import (
         attendance_summary,
         audit_entries,
@@ -26,7 +28,7 @@ if __package__:
 else:  # Vercel imports main.py directly when web_api is the project root.
     from auth import Principal, current_principal, require_admin
     from config import Settings
-    from database import create_database_engine, ensure_audit_table
+    from database import create_database_engine
     from queries import (
         attendance_summary,
         audit_entries,
@@ -42,16 +44,22 @@ else:  # Vercel imports main.py directly when web_api is the project root.
 
 def create_app(settings: Settings | None = None, engine: Engine | None = None) -> FastAPI:
     app_settings = settings or Settings()
-    app_settings.validate()
-    app_engine = engine or create_database_engine(app_settings.database_url)
+    configuration_error: str | None = None
+    try:
+        app_settings.validate()
+    except RuntimeError as exc:
+        configuration_error = str(exc)
+    app_engine = engine
+    if app_engine is None and configuration_error is None:
+        app_engine = create_database_engine(app_settings.database_url)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
-        with app_engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        ensure_audit_table(app_engine)
+        # Do not make serverless startup depend on an external database. The
+        # health route reports configuration/connectivity problems as JSON.
         yield
-        app_engine.dispose()
+        if app_engine is not None:
+            app_engine.dispose()
 
     application = FastAPI(
         title="Kotak School Data API",
@@ -62,7 +70,10 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     )
     application.state.settings = app_settings
     application.state.engine = app_engine
-    application.state.refresh_manager = RefreshManager(app_settings, app_engine)
+    application.state.configuration_error = configuration_error
+    application.state.refresh_manager = (
+        RefreshManager(app_settings, app_engine) if app_engine is not None else None
+    )
     application.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.allowed_origins,
@@ -73,8 +84,25 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
 
     @application.get("/health")
     async def health(request: Request):
-        with request.app.state.engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+        if request.app.state.configuration_error:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={
+                    "status": "configuration_error",
+                    "detail": request.app.state.configuration_error,
+                },
+            )
+        try:
+            with request.app.state.engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={
+                    "status": "database_unavailable",
+                    "detail": "The database connection could not be established.",
+                },
+            )
         return {"status": "healthy", "service": "kotak-school-data-api"}
 
     @application.get("/api/session")
