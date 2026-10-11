@@ -1,9 +1,5 @@
-pandas
-numpy
-gspread
-oauth2client
-SQLAlchemy
-requests
-beautifulsoup4
-python-dotenv
-psycopg2-binary
+fastapi>=0.119,<1
+uvicorn>=0.37,<1
+SQLAlchemy>=2.0,<3
+psycopg2-binary>=2.9,<3
+python-dotenv>=1.1,<2

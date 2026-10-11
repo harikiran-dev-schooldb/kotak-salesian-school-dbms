@@ -6,6 +6,25 @@ It helps administrators and management teams monitor **student attendance, fee c
 
 This project integrates **database-driven data (MySQL/PostgreSQL)** with **Python-based data processing** and **Power BI visualizations** to deliver actionable insights.
 
+## 🌐 Private Web Dashboard
+
+The project now also includes a responsive private web dashboard and a secure
+FastAPI service for PostgreSQL data:
+
+- **Dashboard:** https://kotak-school-data-hub.buzzycoot64.chatgpt.site
+- **Frontend source:** `web_dashboard/dist/`
+- **API source and deployment guide:** `web_api/README.md`
+- **Container startup:** `docker compose --env-file /dev/null up -d --build api`
+
+The published dashboard starts with demonstration totals. Use its connection
+button to supply the deployed API's HTTPS URL and a viewer or administrator
+key. Credentials remain in browser session storage. Student and transaction
+identifiers returned by the API are masked.
+
+The original notebook remains the data-ingestion workspace. Production refresh
+execution stays disabled until each notebook workflow is extracted into a
+reviewed, non-interactive command and configured through environment variables.
+
 ---
 
 ## ✅ Key Features

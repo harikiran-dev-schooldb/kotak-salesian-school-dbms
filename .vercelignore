@@ -1,0 +1,13 @@
+.git/
+.venv/
+.pytest_cache/
+.env
+.DS_Store
+**/__pycache__/
+**/*.pyc
+source_code/
+source_data/
+output_data/
+postgres_backups/
+web_dashboard/
+web_api/tests/

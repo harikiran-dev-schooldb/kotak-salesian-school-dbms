@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16
@@ -9,7 +7,7 @@ services:
 
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Hari@123
+      POSTGRES_PASSWORD: ${POSTGRES_CONTAINER_PASSWORD:-local-development-only}
       POSTGRES_DB: ksdb
 
     ports:
@@ -17,6 +15,26 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: web_api/Dockerfile
+    container_name: ksdb_api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        format: raw
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./postgres_backups:/app/postgres_backups
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   postgres_data:
