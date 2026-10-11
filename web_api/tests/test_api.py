@@ -125,5 +125,5 @@ def test_health_reports_invalid_database_url_without_crashing():
     assert response.status_code == 503
     assert response.json() == {
         "status": "configuration_error",
-        "detail": "DATABASE_URL is invalid or its database driver is unavailable",
+        "detail": "DATABASE_URL setup failed (ArgumentError)",
     }
