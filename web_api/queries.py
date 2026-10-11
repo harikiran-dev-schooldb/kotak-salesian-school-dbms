@@ -90,11 +90,15 @@ def students(
     status_id: int | None,
     limit: int,
     offset: int,
+    reveal_identity: bool = False,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {"year": academic_year_id, "limit": limit, "offset": offset}
     clauses = ["s.academic_year_id=:year"]
     if search:
-        clauses.append("(LOWER(s.adm_no) LIKE :search OR LOWER(COALESCE(s.grade_id,'')) LIKE :search)")
+        searchable = ["LOWER(s.adm_no) LIKE :search", "LOWER(COALESCE(s.grade_id,'')) LIKE :search"]
+        if reveal_identity:
+            searchable.append("LOWER(COALESCE(sl.name,'')) LIKE :search")
+        clauses.append(f"({' OR '.join(searchable)})")
         params["search"] = f"%{search.lower()}%"
     if grade_id:
         clauses.append("s.grade_id=:grade")
@@ -103,12 +107,18 @@ def students(
         clauses.append("s.status_id=:status")
         params["status"] = status_id
     where = " AND ".join(clauses)
-    total = _scalar(engine, f"SELECT COUNT(*) FROM students s WHERE {where}", params)
+    total = _scalar(
+        engine,
+        f"SELECT COUNT(*) FROM students s LEFT JOIN student_list sl ON sl.adm_no=s.adm_no WHERE {where}",
+        params,
+    )
     rows = _rows(
         engine,
         f"""
-        SELECT s.adm_no, s.class_nos, s.grade_id, s.status_id, s.branch_id
-        FROM students s WHERE {where}
+        SELECT s.adm_no, sl.name, s.class_nos, s.grade_id, s.status_id, s.branch_id
+        FROM students s
+        LEFT JOIN student_list sl ON sl.adm_no=s.adm_no
+        WHERE {where}
         ORDER BY s.grade_id, s.adm_no LIMIT :limit OFFSET :offset
         """,
         params,
@@ -116,8 +126,8 @@ def students(
     status_labels = {1: "Continuing", 2: "Left", 3: "New", 4: "Alumni", 5: "TC applied"}
     items = [
         {
-            "admission_no": mask_identifier(row["adm_no"]),
-            "student": f"Student {str(row['adm_no'])[-4:]}",
+            "admission_no": row["adm_no"] if reveal_identity else mask_identifier(row["adm_no"]),
+            "student": (row["name"] or "—") if reveal_identity else f"Student {str(row['adm_no'])[-4:]}",
             "class_nos": row["class_nos"],
             "grade": row["grade_id"],
             "status_id": row["status_id"],
@@ -126,7 +136,13 @@ def students(
         }
         for row in rows
     ]
-    return {"total": int(total), "limit": limit, "offset": offset, "items": items}
+    return {
+        "total": int(total),
+        "limit": limit,
+        "offset": offset,
+        "identity_visible": reveal_identity,
+        "items": items,
+    }
 
 
 def fees(engine: Engine, academic_year_id: int, limit: int = 20) -> dict[str, Any]:

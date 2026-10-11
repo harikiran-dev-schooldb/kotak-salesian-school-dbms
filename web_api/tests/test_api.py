@@ -18,12 +18,14 @@ def build_client(tmp_path: Path) -> TestClient:
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     with engine.begin() as connection:
         connection.execute(text("CREATE TABLE students (id INTEGER PRIMARY KEY, adm_no TEXT, class_nos TEXT, grade_id TEXT, academic_year_id INTEGER, status_id INTEGER, branch_id INTEGER)"))
+        connection.execute(text("CREATE TABLE student_list (adm_no TEXT PRIMARY KEY, name TEXT)"))
         connection.execute(text("CREATE TABLE fees_table (sno INTEGER PRIMARY KEY, adm_no TEXT, total_fee_paid NUMERIC, total_fee_due NUMERIC, discount_concession NUMERIC, total_fees NUMERIC, academic_year_id INTEGER)"))
         connection.execute(text('CREATE TABLE daywise_fees_collection ("SNo" TEXT, "AdmissionNo" TEXT, "Date" TEXT, "ReceivedAmount" NUMERIC, academic_year_id INTEGER, account_name TEXT, payment_mode TEXT)'))
         connection.execute(text("CREATE TABLE fee_concession_report (id INTEGER PRIMARY KEY, date TEXT, student_number TEXT, discount_given NUMERIC, academic_year_id INTEGER)"))
         connection.execute(text("CREATE TABLE atom_missing_records (id INTEGER PRIMARY KEY, admission_no TEXT, amount NUMERIC, net_amount_to_be_paid NUMERIC, txn_date TEXT, settlement_date TEXT, description TEXT)"))
         connection.execute(text("CREATE TABLE attendance_report (id INTEGER PRIMARY KEY, date TEXT, admission_no TEXT, class_no INTEGER, grade_id INTEGER, branch_id INTEGER, attendance_status_id INTEGER, academic_year_id INTEGER, source_file TEXT)"))
         connection.execute(text("INSERT INTO students VALUES (1,'KSS00123','10','10',3,1,1),(2,'KSS00456','9','9',3,3,1)"))
+        connection.execute(text("INSERT INTO student_list (adm_no,name) VALUES ('KSS00123','Asha Rao'),('KSS00456','Ravi Kumar')"))
         connection.execute(text("INSERT INTO fees_table VALUES (1,'KSS00123',10000,2000,500,12500,3)"))
         connection.execute(text("INSERT INTO daywise_fees_collection VALUES ('R1','KSS00123','2026-10-10',10000,3,'School fee','Online')"))
         connection.execute(text("INSERT INTO fee_concession_report VALUES (1,'2026-10-09','KSS00123',500,3)"))
@@ -59,13 +61,33 @@ def test_overview_uses_live_aggregates(tmp_path: Path):
         assert payload["attendance_percent"] == 50
 
 
-def test_students_are_masked(tmp_path: Path):
+def test_viewer_student_identity_data_remains_masked(tmp_path: Path):
     with build_client(tmp_path) as client:
         response = client.get("/api/students", headers={"X-API-Key": "viewer-test-key"})
         assert response.status_code == 200
         payload = response.json()
+        assert payload["identity_visible"] is False
         assert payload["items"][0]["admission_no"] == "ADM•••0123"
-        assert "KSS00123" not in response.text
+        assert payload["items"][0]["student"] == "Student 0123"
+
+
+def test_admin_students_return_real_identity_data(tmp_path: Path):
+    with build_client(tmp_path) as client:
+        response = client.get("/api/students", headers={"X-API-Key": "admin-test-key"})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["identity_visible"] is True
+        assert payload["items"][0]["admission_no"] == "KSS00123"
+        assert payload["items"][0]["student"] == "Asha Rao"
+
+
+def test_students_can_be_searched_by_real_name(tmp_path: Path):
+    with build_client(tmp_path) as client:
+        response = client.get("/api/students?search=ravi", headers={"X-API-Key": "admin-test-key"})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["total"] == 1
+        assert payload["items"][0]["student"] == "Ravi Kumar"
 
 
 def test_viewer_cannot_refresh(tmp_path: Path):

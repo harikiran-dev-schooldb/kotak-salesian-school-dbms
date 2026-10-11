@@ -77,7 +77,7 @@ async function loadOverview(){
   setText('[data-metric="collected"]',formatMoney(data.fees_collected));
   setText('[data-metric="pending"]',formatMoney(data.pending_fees));
   setText('[data-metric="attendance"]',data.attendance_available?`${data.attendance_percent}%`:"Not loaded");
-  setConnectionBanner(`Live data · ${data.academic_year} · Identifiers masked`);
+  setConnectionBanner(`Live data · ${data.academic_year} · ${state.role==='admin'?'Real student identities enabled':'Student identities masked'}`);
 }
 
 async function loadStudents(search=""){
