@@ -129,7 +129,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
         status_id: int | None = Query(default=None, ge=1, le=5),
         limit: int = Query(default=50, ge=1, le=200),
         offset: int = Query(default=0, ge=0, le=100000),
-        principal: Principal = Depends(current_principal),
+        _: Principal = Depends(current_principal),
     ):
         return students(
             request.app.state.engine,
@@ -139,7 +139,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
             status_id,
             limit,
             offset,
-            reveal_identity=principal.role == "admin",
+            reveal_identity=True,
         )
 
     @application.get("/api/fees")

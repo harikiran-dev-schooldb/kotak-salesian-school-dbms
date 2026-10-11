@@ -4,14 +4,6 @@ const yearData={
   "2024-25":{students:"1,744",collected:"₹1.08 Cr",pending:"₹14.9 L",attendance:"90.9%"}
 };
 const yearIds={"2024-25":1,"2025-26":2,"2026-27":3};
-const demoStudents=[
-  ["ADM•••1042","Student 1042","Grade 10 · A","Main campus","Continuing","94%"],
-  ["ADM•••0831","Student 0831","Grade 9 · B","High school","Continuing","91%"],
-  ["ADM•••1527","Student 1527","Grade 7 · A","Primary wing","New","97%"],
-  ["ADM•••0419","Student 0419","Grade 10 · C","Main campus","Continuing","88%"],
-  ["ADM•••1218","Student 1218","Grade 7 · B","Primary wing","Continuing","71%"],
-  ["ADM•••0732","Student 0732","Grade 8 · A","High school","TC applied","86%"]
-];
 const demoPipelines=[
   ["students","Student registry","Google Sheets → students","1,842 records","10 Oct · 6:31 PM"],
   ["fees","Fees master","Google Sheets → fees_table","1,842 records","10 Oct · 6:36 PM"],
@@ -66,9 +58,8 @@ function showView(id){
   if(state.connected)loadViewData(id);
 }
 
-function renderDemoStudents(filter=""){
-  const query=filter.toLowerCase();
-  $("#studentRows").innerHTML=demoStudents.filter(row=>row.join(" ").toLowerCase().includes(query)).map(row=>`<tr>${row.map((cell,index)=>index===4?`<td><span class="status-pill ${cell==='TC applied'?'warning':'success'}">${escapeHtml(cell)}</span></td>`:`<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="6">No matching students</td></tr>`;
+function renderDemoStudents(){
+  $("#studentRows").innerHTML=`<tr><td colspan="6">Connect to the API to view real student records.</td></tr>`;
 }
 
 async function loadOverview(){
@@ -77,7 +68,7 @@ async function loadOverview(){
   setText('[data-metric="collected"]',formatMoney(data.fees_collected));
   setText('[data-metric="pending"]',formatMoney(data.pending_fees));
   setText('[data-metric="attendance"]',data.attendance_available?`${data.attendance_percent}%`:"Not loaded");
-  setConnectionBanner(`Live data · ${data.academic_year} · ${state.role==='admin'?'Real student identities enabled':'Student identities masked'}`);
+  setConnectionBanner(`Live data · ${data.academic_year} · Real identities enabled`);
 }
 
 async function loadStudents(search=""){

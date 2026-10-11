@@ -31,13 +31,6 @@ def _number(value: Any) -> float:
     return float(value or 0)
 
 
-def mask_identifier(value: Any) -> str:
-    text_value = str(value or "").strip()
-    if not text_value:
-        return "—"
-    return f"ADM•••{text_value[-4:]}"
-
-
 def serialize_value(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
@@ -90,14 +83,13 @@ def students(
     status_id: int | None,
     limit: int,
     offset: int,
-    reveal_identity: bool = False,
+    reveal_identity: bool = True,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {"year": academic_year_id, "limit": limit, "offset": offset}
     clauses = ["s.academic_year_id=:year"]
     if search:
         searchable = ["LOWER(s.adm_no) LIKE :search", "LOWER(COALESCE(s.grade_id,'')) LIKE :search"]
-        if reveal_identity:
-            searchable.append("LOWER(COALESCE(sl.name,'')) LIKE :search")
+        searchable.append("LOWER(COALESCE(sl.name,'')) LIKE :search")
         clauses.append(f"({' OR '.join(searchable)})")
         params["search"] = f"%{search.lower()}%"
     if grade_id:
@@ -126,8 +118,8 @@ def students(
     status_labels = {1: "Continuing", 2: "Left", 3: "New", 4: "Alumni", 5: "TC applied"}
     items = [
         {
-            "admission_no": row["adm_no"] if reveal_identity else mask_identifier(row["adm_no"]),
-            "student": (row["name"] or "—") if reveal_identity else f"Student {str(row['adm_no'])[-4:]}",
+            "admission_no": row["adm_no"],
+            "student": row["name"] or "—",
             "class_nos": row["class_nos"],
             "grade": row["grade_id"],
             "status_id": row["status_id"],
@@ -167,7 +159,7 @@ def fees(engine: Engine, academic_year_id: int, limit: int = 20) -> dict[str, An
         items = [
             {
                 "receipt": row["receipt"],
-                "admission_no": mask_identifier(row["admission_no"]),
+                "admission_no": row["admission_no"],
                 "payment_date": serialize_value(row["payment_date"]),
                 "amount": _number(row["amount"]),
                 "account_name": row["account_name"],
@@ -259,7 +251,7 @@ def attendance_summary(engine: Engine, academic_year_id: int) -> dict[str, Any]:
     for student in low_rows:
         student_present, student_absent = int(student["present"] or 0), int(student["absent"] or 0)
         low_attendance.append({
-            "admission_no": mask_identifier(student["admission_no"]),
+            "admission_no": student["admission_no"],
             "grade": student["grade"],
             "present": student_present,
             "absent": student_absent,
@@ -306,7 +298,7 @@ def concessions(engine: Engine, academic_year_id: int, limit: int = 50) -> dict[
         "items": [
             {
                 "date": serialize_value(row["date"]),
-                "student_number": mask_identifier(row["student_number"]),
+                "student_number": row["student_number"],
                 "discount_given": _number(row["discount_given"]),
                 "academic_year_id": row["academic_year_id"],
             }
@@ -337,7 +329,7 @@ def unmatched_transactions(engine: Engine, limit: int = 50) -> dict[str, Any]:
         "items": [
             {
                 "transaction": f"AT•••{str(row['id']).zfill(5)}",
-                "admission_no": mask_identifier(row["admission_no"]),
+                "admission_no": row["admission_no"],
                 "amount": _number(row["amount"]),
                 "net_amount_to_be_paid": _number(row["net_amount_to_be_paid"]),
                 "txn_date": serialize_value(row["txn_date"]),

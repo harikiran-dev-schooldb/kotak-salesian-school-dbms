@@ -61,14 +61,14 @@ def test_overview_uses_live_aggregates(tmp_path: Path):
         assert payload["attendance_percent"] == 50
 
 
-def test_viewer_student_identity_data_remains_masked(tmp_path: Path):
+def test_viewer_students_return_real_identity_data(tmp_path: Path):
     with build_client(tmp_path) as client:
         response = client.get("/api/students", headers={"X-API-Key": "viewer-test-key"})
         assert response.status_code == 200
         payload = response.json()
-        assert payload["identity_visible"] is False
-        assert payload["items"][0]["admission_no"] == "ADM•••0123"
-        assert payload["items"][0]["student"] == "Student 0123"
+        assert payload["identity_visible"] is True
+        assert payload["items"][0]["admission_no"] == "KSS00123"
+        assert payload["items"][0]["student"] == "Asha Rao"
 
 
 def test_admin_students_return_real_identity_data(tmp_path: Path):
@@ -88,6 +88,18 @@ def test_students_can_be_searched_by_real_name(tmp_path: Path):
         payload = response.json()
         assert payload["total"] == 1
         assert payload["items"][0]["student"] == "Ravi Kumar"
+
+
+def test_all_authenticated_reports_return_real_identifiers(tmp_path: Path):
+    with build_client(tmp_path) as client:
+        headers = {"X-API-Key": "viewer-test-key"}
+        fees_response = client.get("/api/fees?academic_year_id=3", headers=headers)
+        concessions_response = client.get("/api/concessions?academic_year_id=3", headers=headers)
+        transactions_response = client.get("/api/transactions/unmatched", headers=headers)
+
+        assert fees_response.json()["recent_payments"][0]["admission_no"] == "KSS00123"
+        assert concessions_response.json()["items"][0]["student_number"] == "KSS00123"
+        assert transactions_response.json()["items"][0]["admission_no"] == "KSS00456"
 
 
 def test_viewer_cannot_refresh(tmp_path: Path):
@@ -111,8 +123,7 @@ def test_attendance_uses_present_status_two_and_masks_students(tmp_path: Path):
         assert payload["attendance_percent"] == 50
         assert payload["latest_attendance_percent"] == 50
         assert payload["latest_date"] == "2026-10-11"
-        assert payload["low_attendance"][0]["admission_no"].startswith("ADM•••")
-        assert "KSS00456" not in response.text
+        assert payload["low_attendance"][0]["admission_no"] == "KSS00456"
 
 
 def test_health_reports_missing_database_configuration():

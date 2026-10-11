@@ -19,7 +19,7 @@ FastAPI service for PostgreSQL data:
 The published dashboard starts with demonstration totals. Use its connection
 button to supply the deployed API's HTTPS URL and a viewer or administrator
 key. Credentials remain in browser session storage. Student and transaction
-identifiers returned by the API are masked.
+identities are returned in full to authenticated sessions.
 
 The original notebook remains the data-ingestion workspace. Production refresh
 execution stays disabled until each notebook workflow is extracted into a
