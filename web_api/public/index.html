@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Kotak Salesian School administration and finance dashboard">
+  <title>Kotak School Data Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">KS</div>
+        <div><strong>Kotak Salesian</strong><span>School Data Hub</span></div>
+      </div>
+
+      <nav class="nav" aria-label="Primary navigation">
+        <p class="nav-label">Workspace</p>
+        <button class="nav-item active" data-view="overview"><span>⌂</span>Overview</button>
+        <button class="nav-item" data-view="students"><span>◎</span>Students</button>
+        <button class="nav-item" data-view="fees"><span>₹</span>Fees & collections</button>
+        <button class="nav-item" data-view="attendance"><span>✓</span>Attendance</button>
+        <button class="nav-item" data-view="concessions"><span>◇</span>Concessions</button>
+        <button class="nav-item" data-view="transactions"><span>↔</span>Transactions</button>
+        <p class="nav-label">Administration</p>
+        <button class="nav-item" data-view="refresh"><span>↻</span>Data refresh</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="privacy-badge"><span></span>Private workspace</div>
+        <p>Student identifiers are masked in this interface.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-button" id="menuButton" aria-label="Open navigation">☰</button>
+        <div class="topbar-title">
+          <p>Kotak Salesian School</p>
+          <h1 id="pageTitle">Overview</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="year-select">Academic year
+            <select id="yearSelect">
+              <option value="2026-27">2026–27</option>
+              <option value="2025-26">2025–26</option>
+              <option value="2024-25">2024–25</option>
+            </select>
+          </label>
+          <button class="icon-button" id="connectionButton" aria-label="Connect data API" title="Connect data API">↗</button>
+          <div class="avatar" title="Administrator">AD</div>
+        </div>
+      </header>
+
+      <div class="demo-banner" id="dataBanner"><strong id="dataMode">Dashboard preview</strong><span id="dataMessage">Uses non-sensitive demonstration totals. Connect the secure server API for live data.</span></div>
+
+      <section class="view active" id="overview" data-title="Overview">
+        <div class="section-heading">
+          <div><p class="eyebrow">School pulse</p><h2>Good morning, Administrator</h2><p>A clear view of collections, attendance, and data quality.</p></div>
+          <button class="secondary-button" data-view-target="refresh">View refresh status</button>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card accent-blue"><div class="metric-icon">◎</div><p>Total students</p><h3 data-metric="students">1,842</h3><span class="trend up">↑ 3.4% from last year</span></article>
+          <article class="metric-card accent-green"><div class="metric-icon">₹</div><p>Fees collected</p><h3 data-metric="collected">₹1.28 Cr</h3><span class="trend up">↑ 8.1% this term</span></article>
+          <article class="metric-card accent-orange"><div class="metric-icon">◷</div><p>Pending fees</p><h3 data-metric="pending">₹18.6 L</h3><span class="trend warn">126 accounts</span></article>
+          <article class="metric-card accent-violet"><div class="metric-icon">✓</div><p>Attendance today</p><h3 data-metric="attendance">92.8%</h3><span class="trend up">↑ 1.2% this week</span></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel wide">
+            <div class="panel-header"><div><p class="eyebrow">Collection trend</p><h3>Fees collected by month</h3></div><div class="legend"><i></i>Collected</div></div>
+            <div class="chart-wrap">
+              <div class="y-axis"><span>₹30L</span><span>₹20L</span><span>₹10L</span><span>₹0</span></div>
+              <svg class="line-chart" viewBox="0 0 700 250" role="img" aria-label="Fee collections from June to March">
+                <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#175cd3" stop-opacity=".28"/><stop offset="1" stop-color="#175cd3" stop-opacity="0"/></linearGradient></defs>
+                <g class="grid-lines"><line x1="10" y1="25" x2="690" y2="25"/><line x1="10" y1="90" x2="690" y2="90"/><line x1="10" y1="155" x2="690" y2="155"/><line x1="10" y1="220" x2="690" y2="220"/></g>
+                <path class="area" d="M10 177 L85 145 L160 163 L235 106 L310 123 L385 73 L460 94 L535 53 L610 70 L690 31 L690 220 L10 220 Z"/>
+                <polyline class="line" points="10,177 85,145 160,163 235,106 310,123 385,73 460,94 535,53 610,70 690,31"/>
+                <g class="dots"><circle cx="10" cy="177" r="5"/><circle cx="85" cy="145" r="5"/><circle cx="160" cy="163" r="5"/><circle cx="235" cy="106" r="5"/><circle cx="310" cy="123" r="5"/><circle cx="385" cy="73" r="5"/><circle cx="460" cy="94" r="5"/><circle cx="535" cy="53" r="5"/><circle cx="610" cy="70" r="5"/><circle cx="690" cy="31" r="5"/></g>
+              </svg>
+              <div class="x-axis"><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header"><div><p class="eyebrow">Payment health</p><h3>Student status</h3></div></div>
+            <div class="donut-layout">
+              <div class="donut payment-donut"><div><strong>1,842</strong><span>Students</span></div></div>
+              <div class="donut-legend"><p><i class="paid"></i>Paid <strong>68%</strong></p><p><i class="partial"></i>Partial <strong>21%</strong></p><p><i class="unpaid"></i>Not paid <strong>8%</strong></p><p><i class="rte"></i>RTE <strong>3%</strong></p></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header"><div><p class="eyebrow">Branch comparison</p><h3>Collection progress</h3></div></div>
+            <div class="progress-list">
+              <div><p><span>Main campus</span><strong>88%</strong></p><div><i style="width:88%"></i></div></div>
+              <div><p><span>Primary wing</span><strong>82%</strong></p><div><i style="width:82%"></i></div></div>
+              <div><p><span>High school</span><strong>76%</strong></p><div><i style="width:76%"></i></div></div>
+              <div><p><span>Junior college</span><strong>71%</strong></p><div><i style="width:71%"></i></div></div>
+            </div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-header"><div><p class="eyebrow">Attention needed</p><h3>Operational alerts</h3></div><button class="text-button">View all</button></div>
+            <div class="alert-list">
+              <div class="alert-item orange"><span>!</span><div><strong>126 fee accounts need follow-up</strong><p>Pending beyond the current installment date</p></div><button data-view-target="fees">Review</button></div>
+              <div class="alert-item red"><span>↓</span><div><strong>18 students below 75% attendance</strong><p>Across grades 6–10 this term</p></div><button data-view-target="attendance">Review</button></div>
+              <div class="alert-item blue"><span>↔</span><div><strong>7 unmatched online transactions</strong><p>Atom records not found in day-wise collection</p></div><button data-view-target="transactions">Review</button></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="students" data-title="Students">
+        <div class="section-heading compact"><div><p class="eyebrow">Student registry</p><h2>Students</h2><p>Search academic records without exposing sensitive identity fields.</p></div><button class="primary-button">Export filtered list</button></div>
+        <div class="metric-grid small"><article class="mini-stat"><span>Active</span><strong>1,736</strong></article><article class="mini-stat"><span>New admissions</span><strong>164</strong></article><article class="mini-stat"><span>TC applied</span><strong>28</strong></article><article class="mini-stat"><span>Alumni</span><strong>312</strong></article></div>
+        <article class="panel table-panel"><div class="table-toolbar"><input class="search" id="studentSearch" placeholder="Search admission number or grade"><select><option>All grades</option><option>Grade 10</option><option>Grade 9</option><option>Grade 8</option></select><select><option>All statuses</option><option>Continuing</option><option>New</option><option>TC applied</option></select></div><div class="table-scroll"><table><thead><tr><th>Admission no.</th><th>Student</th><th>Grade</th><th>Branch</th><th>Status</th><th>Attendance</th></tr></thead><tbody id="studentRows"></tbody></table></div></article>
+      </section>
+
+      <section class="view" id="fees" data-title="Fees & collections">
+        <div class="section-heading compact"><div><p class="eyebrow">Financial operations</p><h2>Fees & collections</h2><p>Monitor collection health, dues, and payment modes.</p></div><button class="primary-button">Download report</button></div>
+        <div class="metric-grid small"><article class="mini-stat"><span>Expected</span><strong id="expectedStat">₹1.47 Cr</strong></article><article class="mini-stat"><span>Collected</span><strong id="collectedStat">₹1.28 Cr</strong></article><article class="mini-stat"><span>Concessions</span><strong id="feeConcessionStat">₹7.4 L</strong></article><article class="mini-stat"><span>Collection rate</span><strong id="collectionRateStat">87.3%</strong></article></div>
+        <div class="dashboard-grid"><article class="panel wide"><div class="panel-header"><div><p class="eyebrow">Collection register</p><h3>Recent payments</h3></div><div class="status-pill success">Reconciled</div></div><div class="table-scroll"><table><thead><tr><th>Receipt</th><th>Admission</th><th>Date</th><th>Mode</th><th>Account</th><th>Amount</th></tr></thead><tbody id="feeRows"><tr><td>RC-260418</td><td>ADM•••1042</td><td>10 Oct 2026</td><td>Online</td><td>School fee</td><td>₹18,500</td></tr><tr><td>RC-260417</td><td>ADM•••0831</td><td>10 Oct 2026</td><td>Cash</td><td>Transport</td><td>₹7,200</td></tr><tr><td>RC-260416</td><td>ADM•••1527</td><td>9 Oct 2026</td><td>UPI</td><td>School fee</td><td>₹12,400</td></tr><tr><td>RC-260415</td><td>ADM•••0419</td><td>9 Oct 2026</td><td>Card</td><td>School fee</td><td>₹21,000</td></tr></tbody></table></div></article><article class="panel"><div class="panel-header"><div><p class="eyebrow">Payment modes</p><h3>Collection mix</h3></div></div><div class="horizontal-bars"><div><p><span>Online / UPI</span><strong>52%</strong></p><i style="--bar:52%"></i></div><div><p><span>Cash</span><strong>27%</strong></p><i style="--bar:27%"></i></div><div><p><span>Card</span><strong>14%</strong></p><i style="--bar:14%"></i></div><div><p><span>Bank transfer</span><strong>7%</strong></p><i style="--bar:7%"></i></div></div></article></div>
+      </section>
+
+      <section class="view" id="attendance" data-title="Attendance">
+        <div class="section-heading compact"><div><p class="eyebrow">Daily presence</p><h2>Attendance</h2><p>Identify trends and students who may need support.</p></div><button class="primary-button">Attendance report</button></div>
+        <div class="dashboard-grid"><article class="panel"><div class="panel-header"><div><p class="eyebrow" id="attendanceDateLabel">Latest recorded day</p><h3>Overall attendance</h3></div></div><div class="donut-layout centered"><div class="donut attendance-donut"><div><strong id="attendanceToday">92.8%</strong><span>Present</span></div></div></div></article><article class="panel wide"><div class="panel-header"><div><p class="eyebrow">By grade</p><h3>Latest attendance</h3></div></div><div class="grade-bars" id="gradeBars"></div></article><article class="panel full"><div class="panel-header"><div><p class="eyebrow">Intervention list</p><h3>Attendance below 75%</h3></div><span class="status-pill warning" id="lowAttendanceCount">18 students</span></div><div class="table-scroll"><table><thead><tr><th>Admission</th><th>Grade</th><th>Present</th><th>Absent</th><th>Attendance</th><th>Action</th></tr></thead><tbody id="attendanceRows"><tr><td>ADM•••0914</td><td>Grade 9 · A</td><td>86</td><td>31</td><td><span class="status-pill danger">73.5%</span></td><td><button class="text-button">Review</button></td></tr><tr><td>ADM•••1218</td><td>Grade 7 · B</td><td>83</td><td>34</td><td><span class="status-pill danger">70.9%</span></td><td><button class="text-button">Review</button></td></tr></tbody></table></div></article></div>
+      </section>
+
+      <section class="view" id="concessions" data-title="Concessions">
+        <div class="section-heading compact"><div><p class="eyebrow">Financial assistance</p><h2>Concessions</h2><p>Track approved assistance with a clear audit trail.</p></div><button class="primary-button">Export register</button></div>
+        <div class="metric-grid small"><article class="mini-stat"><span>Total granted</span><strong id="concessionTotalStat">₹7.4 L</strong></article><article class="mini-stat"><span>Beneficiaries</span><strong id="beneficiaryStat">96</strong></article><article class="mini-stat"><span>Average</span><strong id="concessionAverageStat">₹7,708</strong></article><article class="mini-stat"><span>Of expected fees</span><strong>5.0%</strong></article></div>
+        <article class="panel table-panel"><div class="panel-header"><div><p class="eyebrow">Register</p><h3>Recent concessions</h3></div><span class="status-pill success">Approved records</span></div><div class="table-scroll"><table><thead><tr><th>Date</th><th>Student</th><th>Amount</th><th>Academic year</th></tr></thead><tbody id="concessionRows"><tr><td>8 Oct 2026</td><td>ADM•••0732</td><td>₹8,500</td><td>2026–27</td></tr><tr><td>6 Oct 2026</td><td>ADM•••1147</td><td>₹12,000</td><td>2026–27</td></tr><tr><td>2 Oct 2026</td><td>ADM•••0319</td><td>₹10,000</td><td>2026–27</td></tr></tbody></table></div></article>
+      </section>
+
+      <section class="view" id="transactions" data-title="Transactions">
+        <div class="section-heading compact"><div><p class="eyebrow">Payment reconciliation</p><h2>Transactions</h2><p>Match Atom settlements against day-wise school collections.</p></div><button class="primary-button">Export exceptions</button></div>
+        <div class="metric-grid small"><article class="mini-stat"><span>Atom transactions</span><strong>4,218</strong></article><article class="mini-stat"><span>Matched</span><strong>4,211</strong></article><article class="mini-stat"><span>Unmatched</span><strong class="orange-text" id="unmatchedStat">7</strong></article><article class="mini-stat"><span>Unmatched amount</span><strong id="unmatchedAmountStat">₹27,700</strong></article></div>
+        <article class="panel table-panel"><div class="panel-header"><div><p class="eyebrow">Exceptions</p><h3>Unmatched Atom payments</h3></div><span class="status-pill warning">Needs review</span></div><div class="table-scroll"><table><thead><tr><th>Transaction</th><th>Admission</th><th>Transaction date</th><th>Settlement date</th><th>Amount</th><th>Status</th></tr></thead><tbody id="transactionRows"><tr><td>AT•••88214</td><td>ADM•••0284</td><td>9 Oct 2026</td><td>10 Oct 2026</td><td>₹18,500</td><td><span class="status-pill warning">Unmatched</span></td></tr><tr><td>AT•••88197</td><td>ADM•••1431</td><td>9 Oct 2026</td><td>10 Oct 2026</td><td>₹9,200</td><td><span class="status-pill warning">Unmatched</span></td></tr></tbody></table></div></article>
+      </section>
+
+      <section class="view" id="refresh" data-title="Data refresh">
+        <div class="section-heading compact"><div><p class="eyebrow">Administrator tools</p><h2>Data refresh</h2><p>Review pipeline status before requesting a controlled server refresh.</p></div><span class="status-pill success"><i></i>All systems healthy</span></div>
+        <div class="safety-callout"><span>i</span><div><strong>Protected operation</strong><p>The production implementation must run the Python pipeline on a private server. This preview never receives database passwords or student source files.</p></div></div>
+        <div class="pipeline-grid" id="pipelineGrid"></div>
+        <article class="panel audit-panel"><div class="panel-header"><div><p class="eyebrow">Audit trail</p><h3>Recent refresh activity</h3></div></div><div class="timeline"><div><i></i><p><strong>Day-wise collections refreshed</strong><span>10 Oct 2026, 6:42 PM · 4,218 records · Administrator</span></p></div><div><i></i><p><strong>Student registry refreshed</strong><span>10 Oct 2026, 6:31 PM · 1,842 records · Administrator</span></p></div><div><i></i><p><strong>Database backup verified</strong><span>10 Oct 2026, 6:28 PM · 312 KB · Automated</span></p></div></div></article>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+      <div class="modal-icon">↻</div><p class="eyebrow">Server connection required</p><h2 id="modalTitle">Refresh request prepared</h2>
+      <p>The web interface is ready. Connect the private pipeline API before enabling production refreshes.</p>
+      <div class="modal-note"><strong>Safety checks included</strong><span>Verified backup · Atomic database writes · Audit logging · Admin-only access</span></div>
+      <button class="primary-button full-button" id="modalDone">Understood</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="connectionModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="connectionTitle">
+      <button class="modal-close" id="connectionClose" aria-label="Close">×</button>
+      <div class="modal-icon">↗</div><p class="eyebrow">Secure server connection</p><h2 id="connectionTitle">Connect live school data</h2>
+      <p>The API key is kept only for this browser session and is never included in the published website.</p>
+      <label class="field-label">API address<input id="apiUrl" type="url" placeholder="https://api.example.com"></label>
+      <label class="field-label">API key<input id="apiKey" type="password" placeholder="Viewer or administrator key" autocomplete="off"></label>
+      <p class="form-status" id="connectionStatus"></p>
+      <div class="button-row"><button class="secondary-button" id="disconnectButton">Use preview data</button><button class="primary-button" id="connectButton">Connect securely</button></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

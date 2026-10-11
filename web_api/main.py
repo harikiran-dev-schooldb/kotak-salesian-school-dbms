@@ -8,20 +8,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Engine, text
 
-from .auth import Principal, current_principal, require_admin
-from .config import Settings
-from .database import create_database_engine, ensure_audit_table
-from .queries import (
-    attendance_summary,
-    audit_entries,
-    concessions,
-    fees,
-    overview,
-    pipeline_status,
-    students,
-    unmatched_transactions,
-)
-from .refresh import PIPELINES, RefreshManager
+if __package__:
+    from .auth import Principal, current_principal, require_admin
+    from .config import Settings
+    from .database import create_database_engine, ensure_audit_table
+    from .queries import (
+        attendance_summary,
+        audit_entries,
+        concessions,
+        fees,
+        overview,
+        pipeline_status,
+        students,
+        unmatched_transactions,
+    )
+    from .refresh import PIPELINES, RefreshManager
+else:  # Vercel imports main.py directly when web_api is the project root.
+    from auth import Principal, current_principal, require_admin
+    from config import Settings
+    from database import create_database_engine, ensure_audit_table
+    from queries import (
+        attendance_summary,
+        audit_entries,
+        concessions,
+        fees,
+        overview,
+        pipeline_status,
+        students,
+        unmatched_transactions,
+    )
+    from refresh import PIPELINES, RefreshManager
 
 
 def create_app(settings: Settings | None = None, engine: Engine | None = None) -> FastAPI:
@@ -152,8 +168,13 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     # Mount the compiled dashboard last so the API routes above retain priority.
     # This gives local and container deployments a same-origin option while the
     # separately hosted private dashboard can still connect over CORS.
-    dashboard_dir = Path(__file__).resolve().parents[1] / "web_dashboard" / "dist"
-    if dashboard_dir.is_dir():
+    dashboard_directories = (
+        Path(__file__).resolve().parents[1] / "web_dashboard" / "dist",
+        Path(__file__).resolve().parent / "public",
+        Path(__file__).resolve().parents[1] / "public",
+    )
+    dashboard_dir = next((path for path in dashboard_directories if path.is_dir()), None)
+    if dashboard_dir:
         application.mount("/", StaticFiles(directory=dashboard_dir, html=True), name="dashboard")
 
     return application

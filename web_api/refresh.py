@@ -10,7 +10,10 @@ from typing import Any
 
 from sqlalchemy import Engine, text
 
-from .config import Settings
+if __package__:
+    from .config import Settings
+else:  # Vercel standalone-module mode.
+    from config import Settings
 
 
 PIPELINES = {"students", "fees", "daywise", "concessions", "transactions", "attendance", "all"}
