@@ -25,9 +25,6 @@ jobs:
     environment: production
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      ENVIRONMENT: production
-      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-      VIEWER_API_KEY: ${{ secrets.VIEWER_API_KEY }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
       GOOGLE_STUDENT_SHEET_2024_25: ${{ secrets.GOOGLE_STUDENT_SHEET_2024_25 }}
       GOOGLE_STUDENT_SHEET_2025_26: ${{ secrets.GOOGLE_STUDENT_SHEET_2025_26 }}

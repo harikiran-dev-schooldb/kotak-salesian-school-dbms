@@ -13,7 +13,6 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 from sqlalchemy import Engine, text
 
-from .config import Settings
 from .database import create_database_engine
 
 
@@ -281,9 +280,7 @@ def run_sync(*, dry_run: bool = False) -> SyncResult:
     _validate(student_list, students, fees)
     result = SyncResult(students=len(students), student_list=len(student_list), fees=len(fees))
     if not dry_run:
-        settings = Settings()
-        settings.validate()
-        engine = create_database_engine(settings.database_url)
+        engine = create_database_engine(_required_environment("DATABASE_URL"))
         try:
             _replace_database(engine, student_list, students, fees)
         finally:
