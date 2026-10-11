@@ -1,0 +1,61 @@
+name: Google Sheets to PostgreSQL sync
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Fetch and validate without changing PostgreSQL
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: google-sheets-postgresql-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ENVIRONMENT: production
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      VIEWER_API_KEY: ${{ secrets.VIEWER_API_KEY }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_STUDENT_SHEET_2024_25: ${{ secrets.GOOGLE_STUDENT_SHEET_2024_25 }}
+      GOOGLE_STUDENT_SHEET_2025_26: ${{ secrets.GOOGLE_STUDENT_SHEET_2025_26 }}
+      GOOGLE_STUDENT_SHEET_2026_27: ${{ secrets.GOOGLE_STUDENT_SHEET_2026_27 }}
+      GOOGLE_FEE_SHEET_2024_25: ${{ secrets.GOOGLE_FEE_SHEET_2024_25 }}
+      GOOGLE_FEE_SHEET_2025_26: ${{ secrets.GOOGLE_FEE_SHEET_2025_26 }}
+      GOOGLE_FEE_SHEET_2026_27: ${{ secrets.GOOGLE_FEE_SHEET_2026_27 }}
+      GOOGLE_STUDENT_UNIQUE_KEY: ${{ vars.GOOGLE_STUDENT_UNIQUE_KEY || 'ADM_NO' }}
+      GOOGLE_SYNC_MIN_ROWS: ${{ vars.GOOGLE_SYNC_MIN_ROWS || '10' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: web_api/requirements-sync.txt
+
+      - name: Install sync dependencies
+        run: python -m pip install -r web_api/requirements-sync.txt
+
+      - name: Synchronize Google Sheets
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            python -m web_api.sync_google_sheets --dry-run
+          else
+            python -m web_api.sync_google_sheets
+          fi

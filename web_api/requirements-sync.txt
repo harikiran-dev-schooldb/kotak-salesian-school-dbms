@@ -1,0 +1,4 @@
+-r requirements.txt
+google-auth>=2.38,<3
+gspread>=6.2,<7
+pandas>=2.2,<4
