@@ -109,3 +109,21 @@ def test_health_reports_missing_database_configuration():
         "status": "configuration_error",
         "detail": "DATABASE_URL is required",
     }
+
+
+def test_health_reports_invalid_database_url_without_crashing():
+    settings = Settings(
+        database_url="not-a-database-url",
+        environment="production",
+        admin_api_key="admin-test-key",
+        viewer_api_key="viewer-test-key",
+    )
+
+    with TestClient(create_app(settings=settings)) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "configuration_error",
+        "detail": "DATABASE_URL is invalid or its database driver is unavailable",
+    }

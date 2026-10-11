@@ -51,7 +51,10 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
         configuration_error = str(exc)
     app_engine = engine
     if app_engine is None and configuration_error is None:
-        app_engine = create_database_engine(app_settings.database_url)
+        try:
+            app_engine = create_database_engine(app_settings.database_url)
+        except (SQLAlchemyError, ModuleNotFoundError):
+            configuration_error = "DATABASE_URL is invalid or its database driver is unavailable"
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
